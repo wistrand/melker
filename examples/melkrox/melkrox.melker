@@ -635,8 +635,9 @@ export async function startGame() {
       return;
     }
 
-    // Assemble final systemPrompt: creative narrator voice + structural rules
-    config.systemPrompt = config.narratorPrompt + '\n\n' + TURN_RULES;
+    // Store only the creative narrator voice; TURN_RULES are injected at turn time
+    // so that rule updates apply to saved games too
+    config.systemPrompt = config.narratorPrompt;
 
     log(logId, 'World: "' + config.title + '"');
     log(logId, (config.locations?.length || 0) + ' locations, ' + (config.characters?.length || 0) + ' characters, ' + (config.threads?.length || 0) + ' threads');
@@ -697,7 +698,7 @@ export async function startGame() {
     log('log-area', 'Generating opening scene via ' + model + '...');
     const t1 = Date.now();
     const opening = await callOpenRouterStreaming(
-      config.systemPrompt,
+      config.systemPrompt + '\n\n' + TURN_RULES,
       [{ role: 'user', content: 'Begin the adventure. Describe the opening scene.' }]
     );
     log(logId, 'Opening scene received (' + ((Date.now() - t1) / 1000).toFixed(1) + 's)');
@@ -1009,7 +1010,7 @@ export async function handleInput() {
     const t0 = Date.now();
 
     const response = await callOpenRouterStreaming(
-      gameState.worldConfig.systemPrompt,
+      gameState.worldConfig.systemPrompt + '\n\n' + TURN_RULES,
       gameState.history
     );
 
@@ -1571,7 +1572,21 @@ Use the STATE tags to maintain consistency. The FACTS block is your long-term me
 
 <CHARACTER_CONTINUITY>
 The appearance: facts in FACTS are for the imagePrompt field and for state tracking — do NOT repeat character appearance descriptions in the narrative. Describe a character's looks briefly when they FIRST appear in the story, then never again unless their appearance changes. When appearance changes, include a stateUpdate setting the appearance:name key to a COMPLETE updated description — merge the original physical identity (face, hair, build, skin) with the current change. Do NOT send only the delta.
-</CHARACTER_CONTINUITY>`;
+</CHARACTER_CONTINUITY>
+
+<PACING>
+NEVER let the story stall. Every turn must CHANGE something — new information, a complication, a shift in dynamics, an NPC acting on their own agenda, a discovery, a consequence arriving. If the player repeats a similar action or lingers, the world responds: NPCs move, timers advance, opportunities close, new ones open.
+
+Rules for keeping turns interesting:
+- ADVANCE at least one thread per turn. Threads should evolve visibly — escalate tensions, reveal clues, shift alliances, create deadlines.
+- NPCs are NOT props. They pursue their goals whether the player engages or not. An NPC who wanted something 3 turns ago has been ACTING on it. Show the results.
+- VARY the dramatic register. Alternate between tension, discovery, dialogue, action, quiet moments, and surprises. Never repeat the same beat twice in a row.
+- CHOICES must include at least one unexpected or provocative option — something the player wouldn't think to type. Mix safe, risky, and lateral options. Never offer 3 variations of "continue doing what you're doing."
+- COMPLICATIONS arrive naturally every 2-3 turns: interruptions, discoveries, betrayals, environmental changes, consequences of earlier actions, NPC confrontations.
+- TIME PASSES. If the player's action is minor ("look around"), advance the clock — an NPC arrives, weather shifts, a sound is heard, something changes in the environment. The world is alive.
+- SCENE CHANGES are good. Move the story to new locations when it serves the narrative. Don't let 3+ turns happen in one place unless dramatic events justify it.
+</PACING>`;
+
 
 const SETUP_SYSTEM_PROMPT = `You are a text adventure game designer. Given the player's story prompt, generate a world configuration as JSON.
 

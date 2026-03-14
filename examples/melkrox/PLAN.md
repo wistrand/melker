@@ -135,8 +135,8 @@ Prompts use XML tag segmentation for clean structure:
 
 - **Image prompts**: `<STYLE>`, `<SCENE>`
 - **Turn history**: `<STATE>` (with `<LOCATION>`, `<INVENTORY>`, `<TURN>`, `<FACTS>`), `<ACTION>`
-- **Setup system prompt**: generates `narratorPrompt` (creative content only)
-- **Turn rules**: `TURN_RULES` constant injected client-side (response format, state tracking, input format, character continuity)
+- **Setup system prompt**: generates `narratorPrompt` (creative content only), stored as `worldConfig.systemPrompt`
+- **Turn rules**: `TURN_RULES` constant appended to `systemPrompt` at turn time (not baked into saved state), so rule updates apply to all games including saved ones
 
 ## World State Facts
 
@@ -344,6 +344,7 @@ Images are stored in cache (`image:{gameId}:{turnCount}`), not in game state. `c
 - **History pruning**: keep last 20 turn pairs in context
 - **Story threads**: world config includes narrative tensions woven organically into scenes, not explicit goals
 - **NPC agency & consequences**: NPCs act independently, player actions have lasting effects
+- **Pacing rules**: TURN_RULES includes a `<PACING>` section that prevents stalling — every turn must change something, threads advance visibly, NPCs act independently, choices include provocative options, complications arrive every 2-3 turns, time passes on minor actions, scene changes are encouraged
 - **Choice normalization**: handles both string and `{label, text}` object formats from AI
 - **XML tag prompts**: structured prompt segmentation for image, turn, and setup prompts
 - **GFX mode cycling**: modifier+click image or use `/gfx` to switch between sextant, halfblock, quadrant, pattern, luma

@@ -1,6 +1,7 @@
 {
   "name": "@melker/melker",
-  "version": "2026.3.9",
+  "version": "2026.3.10",
+  "license": "MIT",
   "type": "module",
   "engines": {
     "node": ">=25.0.0"

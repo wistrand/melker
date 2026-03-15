@@ -436,43 +436,53 @@ export function sandstorm(opts: SandstormOptions = {}): ShaderCallback {
 // --- Magic ---
 
 export interface MagicOptions {
-  /** Drift speed (upward). Default: 3 */
+  /** Distortion strength. Default: 8 */
+  distortion?: number;
+  /** Drift speed (upward). Default: 0.8 */
   driftSpeed?: number;
 }
 
 export function magic(opts: MagicOptions = {}): ShaderCallback {
-  const driftSpeed = opts.driftSpeed ?? 3;
+  const distortion = opts.distortion ?? 8;
+  const driftSpeed = opts.driftSpeed ?? 0.8;
 
   return (x, y, time, _resolution, source) => {
-    const pixel = source?.getPixel(x, y);
+    if (!source) return [0, 0, 0];
+
+    // Drifting simplex field determines splash regions
+    const drift = y + time * driftSpeed;
+    const n = simplex3d(x * 0.035, drift * 0.06, time * 0.15);
+
+    // Distort sample coordinates in splash regions
+    let sx = x, sy = y;
+    if (n > 0.15) {
+      const strength = (n - 0.15) * distortion;
+      const angle = simplex3d(x * 0.02, y * 0.02, time * 0.25) * 6.28;
+      sx = x + Math.cos(angle) * strength;
+      sy = y + Math.sin(angle) * strength;
+    }
+
+    const pixel = source.getPixel(Math.round(sx), Math.round(sy));
     if (!pixel) return [0, 0, 0];
     let r = pixel[0], g = pixel[1], b = pixel[2];
 
-    // Ambient hue wash
-    const shift = time * 0.4;
-    const wash = 0.1;
-    r += wash * (128 + 127 * Math.sin(shift) - r);
-    g += wash * (128 + 127 * Math.sin(shift + 2.09) - g);
-    b += wash * (128 + 127 * Math.sin(shift + 4.19) - b);
-
-    // Two layers of simplex-driven sparkles drifting upward
-    const drift = y + time * driftSpeed;
-    const n1 = simplex3d(x * 0.12, drift * 0.08, time * 0.5);
-    if (n1 > 0.62) {
-      const glow = (n1 - 0.62) * 5;
-      const phase = simplex3d(x * 0.05, y * 0.05, time * 1.2) * 6.28;
-      r = Math.min(255, r + glow * (240 + 15 * Math.sin(phase)));
-      g = Math.min(255, g + glow * (160 + 60 * Math.sin(phase + 2.5)));
-      b = Math.min(255, b + glow * (60 + 40 * Math.sin(phase + 4.5)));
+    // Color splashes — tint distorted areas with warm shifting hues
+    if (n > 0.25) {
+      const intensity = (n - 0.25) * 1.4;
+      const hue = simplex3d(x * 0.02, drift * 0.015, time * 0.2) * 6.28;
+      r = Math.min(255, r + intensity * (120 + 80 * Math.sin(hue)));
+      g = Math.min(255, g + intensity * (60 + 50 * Math.sin(hue + 1.8)));
+      b = Math.min(255, b + intensity * (30 + 25 * Math.sin(hue + 3.6)));
     }
-    const drift2 = y + time * driftSpeed * 0.5;
-    const n2 = simplex3d(x * 0.07 + 50, drift2 * 0.05, time * 0.3);
-    if (n2 > 0.65) {
-      const glow = (n2 - 0.65) * 5;
-      const phase = simplex3d(x * 0.04, y * 0.04, time * 0.8 + 10) * 6.28;
-      r = Math.min(255, r + glow * (255));
-      g = Math.min(255, g + glow * (180 + 50 * Math.sin(phase + 2)));
-      b = Math.min(255, b + glow * (40 + 30 * Math.sin(phase + 4)));
+
+    // Second slower layer — larger cooler splashes
+    const n2 = simplex3d(x * 0.02 + 40, (y + time * driftSpeed * 0.4) * 0.04, time * 0.1);
+    if (n2 > 0.3) {
+      const intensity = (n2 - 0.3) * 1.2;
+      const hue = simplex3d(x * 0.015, y * 0.015, time * 0.12 + 10) * 6.28;
+      r = Math.min(255, r + intensity * (80 + 60 * Math.sin(hue)));
+      g = Math.min(255, g + intensity * (40 + 70 * Math.sin(hue + 2.2)));
+      b = Math.min(255, b + intensity * (20 + 30 * Math.sin(hue + 4.0)));
     }
 
     return [Math.round(r), Math.round(g), Math.round(b)];

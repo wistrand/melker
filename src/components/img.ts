@@ -247,8 +247,8 @@ export const imgSchema: ComponentSchema = {
     ditherBits: { type: 'number', description: 'Color depth for dithering (1-8)' },
     onLoad: { type: ['function', 'string'], description: 'Called when image loads successfully' },
     onError: { type: ['function', 'string'], description: 'Called when image fails to load' },
-    onShader: { type: ['function', 'string'], description: 'Shader callback (x, y, time, resolution, source, utils) => [r,g,b]. utils: noise2d, fbm, palette, smoothstep, mix, fract' },
-    onFilter: { type: ['function', 'string'], description: 'One-time filter callback, runs once when image loads. Same signature as onShader but time is always 0' },
+    onShader: { type: ['function', 'string', 'array'], description: 'Shader callback or array of shader callbacks (pipeline). Each: (x, y, time, resolution, source, utils) => [r,g,b]. utils: noise2d, fbm, palette, smoothstep, mix, fract' },
+    onFilter: { type: ['function', 'string', 'array'], description: 'One-time filter callback or pipeline, runs once when image loads. Same signature as onShader but time is always 0' },
     shaderFps: { type: 'number', description: 'Shader frame rate (default: 30)' },
     // svgOverlay layers are managed via setSvgOverlay/removeSvgOverlay methods
     gfxMode: { type: 'string', description: 'Graphics mode (global MELKER_GFX_MODE overrides)' },

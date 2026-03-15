@@ -23,7 +23,7 @@
     <container style="width: fill; height: fill;">
       <img
         id="shaderImg"
-        src="../../../media/melker-128-anim.gif"
+        src="../../../media/melker-128.png"
         width="100%"
         height="100%"
         style="object-fit: contain;"

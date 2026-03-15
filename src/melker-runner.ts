@@ -79,6 +79,9 @@ import { flattenMessages } from './i18n/mod.ts';
 // Toast system
 import { getToastManager, type ToastOptions } from './toast/mod.ts';
 
+// Shader effects
+import { shaderEffects } from './components/canvas-shader-effects.ts';
+
 /**
  * Wire up bundler registry handlers to UI elements.
  */
@@ -779,6 +782,9 @@ export async function runMelkerFile(
           engine.render();
         },
       },
+
+      // Shader effects
+      shaderEffects,
 
       // Dev Tools
       devtools: {

@@ -327,7 +327,7 @@ Canvas maintains two pixel buffers that are composited during rendering:
 
 ```
 ┌─────────────────────────────────────┐
-│        Drawing Layer                │  ← onPaint, onShader, draw APIs
+│        Drawing Layer                │  ← onPaint, onShader (pipeline), draw APIs
 │        (_colorBuffer)               │
 ├─────────────────────────────────────┤
 │        Image Layer                  │  ← src prop, video frames

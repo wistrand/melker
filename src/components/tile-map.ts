@@ -1450,7 +1450,7 @@ export const tileMapSchema: ComponentSchema = {
     onZoom: { type: ['function', 'string'], description: 'Called when zoom level changes' },
     onClick: { type: ['function', 'string'], description: 'Called on map click with lat/lon' },
     onLoadingChange: { type: ['function', 'string'], description: 'Called when loading count changes' },
-    onShader: { type: ['function', 'string'], description: 'Shader callback (x, y, time, resolution, source?) => [r,g,b] or [r,g,b,a]. Runs per-pixel after tiles + overlay.' },
+    onShader: { type: ['function', 'string', 'array'], description: 'Shader callback or array of shader callbacks (pipeline). Each: (x, y, time, resolution, source?) => [r,g,b] or [r,g,b,a]. Runs per-pixel after tiles + overlay.' },
     shaderFps: { type: 'number', description: 'Shader frame rate (default: 30). Use 0 for static filter.' },
     shaderRunTime: { type: 'number', description: 'Stop shader after this many ms, final frame becomes static image' },
   },

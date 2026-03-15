@@ -70,6 +70,7 @@ const MELKER_INTERFACE_MEMBERS = `  getElementById(id: string): any;
     lint: boolean;
   };
   inspect(value: unknown, options?: { colors?: boolean; depth?: number }): string;
+  shaderEffects: Record<string, (opts?: any) => (...args: any[]) => any>;
   exports: Record<string, any>;`;
 
 /**

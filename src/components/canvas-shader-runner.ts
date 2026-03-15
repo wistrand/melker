@@ -2,7 +2,7 @@
 // Uses shared state object for zero-overhead field access
 
 import { packRGBA, unpackRGBA, TRANSPARENT } from './color-utils.ts';
-import { shaderUtils, type ShaderResolution, type ShaderSource, type ShaderCallback } from './canvas-shader.ts';
+import { shaderUtils, type ShaderResolution, type ShaderSource, type ShaderCallback, type ShaderPipeline } from './canvas-shader.ts';
 import { getGlobalEngine } from '../global-accessors.ts';
 import { getGlobalPerformanceDialog } from '../performance-dialog.ts';
 import { getLogger } from '../logging.ts';
@@ -38,6 +38,10 @@ export interface ShaderState {
   // Output buffer (separate to avoid race conditions)
   outputBuffer: Uint32Array | null;
 
+  // Swap buffers for shader pipeline (intermediate stage outputs)
+  pipelineBuffer: Uint32Array | null;
+  pipelineBuffer2: Uint32Array | null;
+
   // Permission warning flag
   permissionWarned: boolean;
 
@@ -63,6 +67,8 @@ export function createShaderState(): ShaderState {
     bounds: null,
     source: null,
     outputBuffer: null,
+    pipelineBuffer: null,
+    pipelineBuffer2: null,
     permissionWarned: false,
     requestRender: null,
     requestCachedRender: null,
@@ -80,7 +86,7 @@ export interface ShaderContext {
   bufferHeight: number;
 
   // Props
-  onShader: ShaderCallback | undefined;
+  onShader: ShaderPipeline | undefined;
   shaderFps: number | undefined;
   shaderRunTime: number | undefined;
   id: string | undefined;
@@ -114,7 +120,8 @@ export function startShader(
     return; // Already running
   }
 
-  if (!ctx.onShader) {
+  const shaderProp = ctx.onShader;
+  if (!shaderProp || (Array.isArray(shaderProp) && shaderProp.length === 0)) {
     return; // No shader callback
   }
 
@@ -241,7 +248,7 @@ function freezeShaderAsImage(state: ShaderState, ctx: ShaderContext): void {
  */
 function runShaderFrame(state: ShaderState, ctx: ShaderContext): void {
   const shader = ctx.onShader;
-  if (!shader) return;
+  if (!shader || (Array.isArray(shader) && shader.length === 0)) return;
 
   const bufW = ctx.bufferWidth;
   const bufH = ctx.bufferHeight;
@@ -312,38 +319,67 @@ function runShaderFrame(state: ShaderState, ctx: ShaderContext): void {
     state.source.mouseUV.v = -1;
   }
 
-  // getPixel function
-  const source = state.source;
-  source.getPixel = (px: number, py: number): [number, number, number, number] | null => {
-    if (px < 0 || px >= bufW || py < 0 || py >= bufH) return null;
-    const idx = py * bufW + px;
-    const color = imageBuffer[idx];
-    if (color === TRANSPARENT) return null;
-    const rgba = unpackRGBA(color);
-    return [rgba.r, rgba.g, rgba.b, rgba.a];
-  };
-
   // Original image pixel accessor
+  const source = state.source;
   _setupOriginalPixelAccessor(source, ctx.loadedImage);
 
-  // Run shader for each pixel
+  // Normalize to array of shaders, filtering null/undefined slots
+  const shaders = (Array.isArray(shader) ? shader : [shader]).filter((s): s is ShaderCallback => s != null);
+  if (shaders.length === 0) return;
+
+  // Run shader pipeline
   const shaderExecStart = performance.now();
   const colorBuffer = ctx.colorBuffer;
+  let readBuffer = imageBuffer; // first stage reads from source image
 
-  for (let y = 0; y < bufH; y++) {
-    for (let x = 0; x < bufW; x++) {
-      const rgba = shader(x, y, time, state.resolution, source, shaderUtils);
-      if (!rgba) {
-        colorBuffer[y * bufW + x] = TRANSPARENT;
-        continue;
+  // Ensure pipeline swap buffers for multi-stage pipelines
+  if (shaders.length > 1) {
+    if (!state.pipelineBuffer || state.pipelineBuffer.length !== bufferSize) {
+      state.pipelineBuffer = new Uint32Array(bufferSize);
+    }
+    if (shaders.length > 2) {
+      if (!state.pipelineBuffer2 || state.pipelineBuffer2.length !== bufferSize) {
+        state.pipelineBuffer2 = new Uint32Array(bufferSize);
       }
-      const r = Math.max(0, Math.min(255, Math.floor(rgba[0])));
-      const g = Math.max(0, Math.min(255, Math.floor(rgba[1])));
-      const b = Math.max(0, Math.min(255, Math.floor(rgba[2])));
-      const a = rgba.length > 3 ? Math.max(0, Math.min(255, Math.floor((rgba as [number, number, number, number])[3]))) : 255;
-      const color = a === 0 ? TRANSPARENT : packRGBA(r, g, b, a);
-      const index = y * bufW + x;
-      colorBuffer[index] = color;
+    }
+  }
+
+  for (let stage = 0; stage < shaders.length; stage++) {
+    const stageShader = shaders[stage];
+    const isLast = stage === shaders.length - 1;
+    // Alternate between pipeline buffers for intermediate stages
+    const writeBuffer = isLast ? colorBuffer : (stage % 2 === 0 ? state.pipelineBuffer! : state.pipelineBuffer2!);
+    const stageReadBuffer = readBuffer;
+
+    // Set up getPixel to read from current stage's input
+    source.getPixel = (px: number, py: number): [number, number, number, number] | null => {
+      if (px < 0 || px >= bufW || py < 0 || py >= bufH) return null;
+      const idx = py * bufW + px;
+      const color = stageReadBuffer[idx];
+      if (color === TRANSPARENT) return null;
+      const rgba = unpackRGBA(color);
+      return [rgba.r, rgba.g, rgba.b, rgba.a];
+    };
+
+    for (let y = 0; y < bufH; y++) {
+      for (let x = 0; x < bufW; x++) {
+        const rgba = stageShader(x, y, time, state.resolution, source, shaderUtils);
+        if (!rgba) {
+          writeBuffer[y * bufW + x] = TRANSPARENT;
+          continue;
+        }
+        const r = Math.max(0, Math.min(255, Math.floor(rgba[0])));
+        const g = Math.max(0, Math.min(255, Math.floor(rgba[1])));
+        const b = Math.max(0, Math.min(255, Math.floor(rgba[2])));
+        const a = rgba.length > 3 ? Math.max(0, Math.min(255, Math.floor((rgba as [number, number, number, number])[3]))) : 255;
+        const color = a === 0 ? TRANSPARENT : packRGBA(r, g, b, a);
+        writeBuffer[y * bufW + x] = color;
+      }
+    }
+
+    // Next stage reads from this stage's output
+    if (!isLast) {
+      readBuffer = writeBuffer;
     }
   }
 
@@ -374,7 +410,7 @@ export function runShaderPassSync(
   paintSnapshot: Uint32Array
 ): void {
   const shader = ctx.onShader;
-  if (!shader) return;
+  if (!shader || (Array.isArray(shader) && shader.length === 0)) return;
 
   const bufW = ctx.bufferWidth;
   const bufH = ctx.bufferHeight;
@@ -417,40 +453,72 @@ export function runShaderPassSync(
     state.source.mouseUV.v = -1;
   }
 
-  // getPixel reads from the paint snapshot (onPaint output), falling back to image buffer
+  // Original image pixel accessor
   const imageBuffer = ctx.imageColorBuffer;
   const source = state.source;
-  source.getPixel = (px: number, py: number): [number, number, number, number] | null => {
-    if (px < 0 || px >= bufW || py < 0 || py >= bufH) return null;
-    const idx = py * bufW + px;
-    let color = paintSnapshot[idx];
-    if (color === TRANSPARENT) color = imageBuffer[idx];
-    if (color === TRANSPARENT) return null;
-    const rgba = unpackRGBA(color);
-    return [rgba.r, rgba.g, rgba.b, rgba.a];
-  };
-
-  // Original image pixel accessor
   _setupOriginalPixelAccessor(source, ctx.loadedImage);
 
-  // Run shader for each pixel, write directly to colorBuffer
+  // Build initial read buffer from paint snapshot with image fallback
+  const bufferSize = bufW * bufH;
+  // Merge paint snapshot with image buffer as initial source
+  if (!state.pipelineBuffer || state.pipelineBuffer.length !== bufferSize) {
+    state.pipelineBuffer = new Uint32Array(bufferSize);
+  }
+  for (let i = 0; i < bufferSize; i++) {
+    const color = paintSnapshot[i];
+    state.pipelineBuffer[i] = color !== TRANSPARENT ? color : imageBuffer[i];
+  }
+
+  // Normalize to array of shaders, filtering null/undefined slots
+  const shaders = (Array.isArray(shader) ? shader : [shader]).filter((s): s is ShaderCallback => s != null);
+  if (shaders.length === 0) return;
+
+  // For multi-stage sync pass, need a second buffer since pipelineBuffer holds merged source
+  if (shaders.length > 1) {
+    if (!state.pipelineBuffer2 || state.pipelineBuffer2.length !== bufferSize) {
+      state.pipelineBuffer2 = new Uint32Array(bufferSize);
+    }
+  }
+
   const shaderExecStart = performance.now();
   const colorBuffer = ctx.colorBuffer;
+  let readBuffer: Uint32Array = state.pipelineBuffer;
 
-  for (let y = 0; y < bufH; y++) {
-    for (let x = 0; x < bufW; x++) {
-      const rgba = shader(x, y, time, state.resolution, source, shaderUtils);
-      if (!rgba) {
-        colorBuffer[y * bufW + x] = TRANSPARENT;
-        continue;
+  for (let stage = 0; stage < shaders.length; stage++) {
+    const stageShader = shaders[stage];
+    const isLast = stage === shaders.length - 1;
+    // Intermediate stages alternate between pipelineBuffer2 and pipelineBuffer
+    // (stage 0 reads pipelineBuffer so writes to pipelineBuffer2, etc.)
+    const writeBuffer = isLast ? colorBuffer : (stage % 2 === 0 ? state.pipelineBuffer2! : state.pipelineBuffer!);
+    const stageReadBuffer = readBuffer;
+
+    source.getPixel = (px: number, py: number): [number, number, number, number] | null => {
+      if (px < 0 || px >= bufW || py < 0 || py >= bufH) return null;
+      const idx = py * bufW + px;
+      const color = stageReadBuffer[idx];
+      if (color === TRANSPARENT) return null;
+      const rgba = unpackRGBA(color);
+      return [rgba.r, rgba.g, rgba.b, rgba.a];
+    };
+
+    for (let y = 0; y < bufH; y++) {
+      for (let x = 0; x < bufW; x++) {
+        const rgba = stageShader(x, y, time, state.resolution, source, shaderUtils);
+        if (!rgba) {
+          writeBuffer[y * bufW + x] = TRANSPARENT;
+          continue;
+        }
+        const r = Math.max(0, Math.min(255, Math.floor(rgba[0])));
+        const g = Math.max(0, Math.min(255, Math.floor(rgba[1])));
+        const b = Math.max(0, Math.min(255, Math.floor(rgba[2])));
+        const a = rgba.length > 3 ? Math.max(0, Math.min(255, Math.floor((rgba as [number, number, number, number])[3]))) : 255;
+        const color = a === 0 ? TRANSPARENT : packRGBA(r, g, b, a);
+        writeBuffer[y * bufW + x] = color;
       }
-      const r = Math.max(0, Math.min(255, Math.floor(rgba[0])));
-      const g = Math.max(0, Math.min(255, Math.floor(rgba[1])));
-      const b = Math.max(0, Math.min(255, Math.floor(rgba[2])));
-      const a = rgba.length > 3 ? Math.max(0, Math.min(255, Math.floor((rgba as [number, number, number, number])[3]))) : 255;
-      const color = a === 0 ? TRANSPARENT : packRGBA(r, g, b, a);
-      const index = y * bufW + x;
-      colorBuffer[index] = color;
+    }
+
+    if (!isLast) {
+      readBuffer = writeBuffer;
     }
   }
 

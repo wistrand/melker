@@ -9,7 +9,7 @@ import { applyDither, type DitherMode } from '../video/dither.ts';
 import { getGlobalEngine } from '../global-accessors.ts';
 import { getLogger } from '../logging.ts';
 import * as Draw from './canvas-draw.ts';
-import { shaderUtils, type ShaderResolution, type ShaderSource, type ShaderUtils, type ShaderCallback } from './canvas-shader.ts';
+import { shaderUtils, type ShaderResolution, type ShaderSource, type ShaderUtils, type ShaderCallback, type ShaderPipeline } from './canvas-shader.ts';
 import {
   CanvasRenderState, renderToTerminal, renderIsolinesToTerminal, getEffectiveGfxMode, generateSixelOutput, generateKittyOutput, generateITerm2Output,
   GFX_MODES, type CanvasRenderData, type GfxMode, type SixelOutputData, type KittyOutputData, type ITermOutputData, type IsolineRenderProps
@@ -44,7 +44,8 @@ const logger = getLogger('canvas');
 export { packRGBA, unpackRGBA, rgbaToCss, cssToRgba } from './color-utils.ts';
 
 // Re-export shader types for external use
-export { type ShaderResolution, type ShaderSource, type ShaderUtils, type ShaderCallback } from './canvas-shader.ts';
+export { type ShaderResolution, type ShaderSource, type ShaderUtils, type ShaderCallback, type ShaderPipeline } from './canvas-shader.ts';
+export { shaderEffects } from './canvas-shader-effects.ts';
 
 
 export interface CanvasProps extends BaseProps {
@@ -59,8 +60,8 @@ export interface CanvasProps extends BaseProps {
   ditherBits?: number;               // Bits per channel for dithering (1-8, default: 1 for B&W)
   gfxMode?: GfxMode;  // Per-element graphics mode (global config overrides)
   onPaint?: (event: { canvas: CanvasElement; bounds: Bounds }) => void;  // Called when canvas needs repainting
-  onShader?: ShaderCallback;         // Shader-style per-pixel callback (TypeScript, not GLSL)
-  onFilter?: ShaderCallback;         // One-time filter callback, runs once when image loads (same signature as onShader)
+  onShader?: ShaderPipeline;         // Single shader or array of shaders executed in pipeline
+  onFilter?: ShaderPipeline;         // One-time filter callback or pipeline, runs once when image loads (same signature as onShader)
   shaderFps?: number;                // Shader frame rate (default: 30)
   shaderRunTime?: number;            // Stop shader after this many ms, keep final frame as image
   onKeyPress?: (event: KeyPressEvent) => boolean | void;  // Called on keyboard events when focused
@@ -991,31 +992,38 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
     // Scale image to temp buffer
     const scaledData = scaleImageToBuffer(img, scaledWidth, scaledHeight);
 
-    // Apply onFilter if set (one-time per-pixel filter, same signature as onShader)
+    // Apply onFilter if set (one-time per-pixel filter or pipeline, same signature as onShader)
+    // No shader permission required — filters are one-shot, not animated
     if (this.props.onFilter) {
-      const engine = getGlobalEngine();
-      if (engine?.hasPermission?.('shader')) {
-        const resolution: ShaderResolution = { width: scaledWidth, height: scaledHeight, pixelAspect: this.getPixelAspectRatio() };
-        const srcCopy = new Uint8Array(scaledData); // Copy for source.getPixel
-        const source: ShaderSource = {
-          hasImage: true, width: scaledWidth, height: scaledHeight,
-          originalWidth: 0, originalHeight: 0,
-          mouse: { x: -1, y: -1 }, mouseUV: { u: -1, v: -1 },
-          getPixel: (px, py) => {
-            if (px < 0 || px >= scaledWidth || py < 0 || py >= scaledHeight) return null;
-            const i = (py * scaledWidth + px) * 4;
-            return [srcCopy[i], srcCopy[i + 1], srcCopy[i + 2], srcCopy[i + 3]];
-          },
-          getOriginalPixel: () => null,
-        };
-        for (let y = 0; y < scaledHeight; y++) {
-          for (let x = 0; x < scaledWidth; x++) {
-            const rgba = this.props.onFilter(x, y, 0, resolution, source, shaderUtils);
-            const idx = (y * scaledWidth + x) * 4;
-            scaledData[idx] = Math.max(0, Math.min(255, Math.floor(rgba[0])));
-            scaledData[idx + 1] = Math.max(0, Math.min(255, Math.floor(rgba[1])));
-            scaledData[idx + 2] = Math.max(0, Math.min(255, Math.floor(rgba[2])));
-            scaledData[idx + 3] = rgba.length > 3 ? Math.max(0, Math.min(255, Math.floor((rgba as [number, number, number, number])[3]))) : 255;
+      {
+        const filterProp = this.props.onFilter;
+        const filters = (Array.isArray(filterProp) ? filterProp : [filterProp]).filter((f): f is ShaderCallback => f != null);
+        if (filters.length > 0) {
+          const resolution: ShaderResolution = { width: scaledWidth, height: scaledHeight, pixelAspect: this.getPixelAspectRatio() };
+          // Run each filter stage, reading from previous output
+          for (const filter of filters) {
+            const srcCopy = new Uint8Array(scaledData); // Snapshot for source.getPixel
+            const source: ShaderSource = {
+              hasImage: true, width: scaledWidth, height: scaledHeight,
+              originalWidth: 0, originalHeight: 0,
+              mouse: { x: -1, y: -1 }, mouseUV: { u: -1, v: -1 },
+              getPixel: (px, py) => {
+                if (px < 0 || px >= scaledWidth || py < 0 || py >= scaledHeight) return null;
+                const i = (py * scaledWidth + px) * 4;
+                return [srcCopy[i], srcCopy[i + 1], srcCopy[i + 2], srcCopy[i + 3]];
+              },
+              getOriginalPixel: () => null,
+            };
+            for (let y = 0; y < scaledHeight; y++) {
+              for (let x = 0; x < scaledWidth; x++) {
+                const rgba = filter(x, y, 0, resolution, source, shaderUtils);
+                const idx = (y * scaledWidth + x) * 4;
+                scaledData[idx] = Math.max(0, Math.min(255, Math.floor(rgba[0])));
+                scaledData[idx + 1] = Math.max(0, Math.min(255, Math.floor(rgba[1])));
+                scaledData[idx + 2] = Math.max(0, Math.min(255, Math.floor(rgba[2])));
+                scaledData[idx + 3] = rgba.length > 3 ? Math.max(0, Math.min(255, Math.floor((rgba as [number, number, number, number])[3]))) : 255;
+              }
+            }
           }
         }
       }
@@ -2377,8 +2385,8 @@ export const canvasSchema: ComponentSchema = {
     ditherBits: { type: 'number', description: 'Color depth for dithering' },
     gfxMode: { type: 'string', enum: [...GFX_MODES], description: 'Graphics mode (global MELKER_GFX_MODE overrides)' },
     onPaint: { type: ['function', 'string'], description: 'Called when canvas needs repainting, receives event with {canvas, bounds}' },
-    onShader: { type: ['function', 'string'], description: 'Shader callback (x, y, time, resolution, source?) => [r,g,b] or [r,g,b,a]. source has getPixel(), mouse, mouseUV' },
-    onFilter: { type: ['function', 'string'], description: 'One-time filter callback, runs once when image loads. Same signature as onShader but time is always 0' },
+    onShader: { type: ['function', 'string', 'array'], description: 'Shader callback or array of shader callbacks (pipeline). Each: (x, y, time, resolution, source?) => [r,g,b] or [r,g,b,a]. source has getPixel(), mouse, mouseUV' },
+    onFilter: { type: ['function', 'string', 'array'], description: 'One-time filter callback or pipeline, runs once when image loads. Same signature as onShader but time is always 0' },
     shaderFps: { type: 'number', description: 'Shader frame rate (default: 30)' },
     shaderRunTime: { type: 'number', description: 'Stop shader after this many ms, final frame becomes static image' },
     isolineCount: { type: 'number', description: 'Number of auto-generated isolines for isolines gfx mode (default: 5, env: MELKER_ISOLINE_COUNT)' },

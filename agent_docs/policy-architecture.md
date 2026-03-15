@@ -314,6 +314,8 @@ Some permissions are checked at runtime, not via Deno flags:
 
 The `shader` permission controls whether `onShader` callbacks can execute on canvas/img elements. Checked via `engine.hasPermission('shader')`.
 
+**Note:** `onFilter` does **not** require the `shader` permission. Filters are one-shot transforms (run once at image load), not animated loops, so they are not CPU-intensive.
+
 ### `hasPermission()` Method
 
 ```typescript

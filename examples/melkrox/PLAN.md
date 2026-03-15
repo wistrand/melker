@@ -64,6 +64,7 @@ interface GameState {
   location: string;
   choices: string[];
   facts: Record<string, string>; // Persistent world state (AI's long-term memory)
+  mood: string | string[] | null; // Active mood shader(s) from last scene
 }
 // Note: currentImage is a runtime variable loaded from cache, not stored in game state
 ```
@@ -185,14 +186,28 @@ The setup prompt detects the language of the player's input and generates ALL co
 
 ## Shader System
 
-The scene image always shows a shader effect when loading:
-- **Simplex noise plasma** at two scales, blended
-- **Side vignette** that grows over time, fading edges to black
-- **Color tinting** sampled from the source image (3 representative pixels at 25%/50%/75% width, sampled once on first frame and cached)
-- Shader is tied to the game spinner — activates when spinner starts, deactivates when spinner stops
-- All spinners have `shade="true"` for consistent visual treatment
+### Shader Pipeline
 
-Shader lifecycle: `setSpinner('game-spinner', true)` → `setImageLoading(true)` → applies `onShader` + `shaderFps=10`. On stop: `stopShader()` → clear `onShader` → `clear()` → `refreshImage()`.
+The scene image uses a fixed-slot shader pipeline array: `[mood1, mood2, loading, fisheye]`. Null slots are no-ops — slots can be set/cleared independently without rebuilding the array.
+
+- **Slot 0-1: Mood shaders** — 0-2 layered mood effects from the engine's built-in `$melker.shaderEffects` (lightning, rain, bloom, sunrays, glitch, fog, fire, underwater, snow, darkness, sandstorm, magic, heat). Set by the AI narrator via `scene.mood` field (string or array of up to 2), or manually via `/mood`.
+- **Slot 2: Loading shader** — Simplex noise plasma with side vignette and color tinting (sampled from source image). Activates immediately when player sends input, deactivates when new image arrives.
+- **Slot 3: Fisheye** — Mouse-hover zoom using `$melker.shaderEffects.fisheye()`. Samples from original full-resolution source image via `source.getOriginalPixel(u, v)`.
+
+### Loading Shader Lifecycle
+
+Loading shader is managed explicitly via `setImageLoading()`, decoupled from the game spinner:
+1. Player sends input → `setImageLoading(true)` immediately (loading shader on old image)
+2. LLM responds, narrative updates → old image stays with loading shader
+3. 2-second delay (fast-click window to skip image generation)
+4. Image generates → `currentImage` updated → loading shader cleared atomically on new image arrival
+5. End of turn → `setImageLoading(false)` as safety net
+
+Image change detection uses `lastRenderedImage` tracking — `renderScene()` only clears loading shader when a genuinely new image arrives, not on re-renders with the same old image.
+
+### Mood Persistence
+
+Mood is saved to `gameState.mood` and restored on game load, undo, and redo.
 
 ## Player Commands
 
@@ -204,12 +219,15 @@ Shader lifecycle: `setSpinner('game-spinner', true)` → `setImageLoading(true)`
 | `/state`           | Show all world facts (AI's long-term memory) |
 | `/undo`            | Go back one turn (restores cached image + facts) |
 | `/redo`            | Go forward one turn (after undo)      |
+| `/story`           | Generate full story HTML (all turns with images) and open in browser |
 | `/image`           | Open scene image in system browser    |
 | `/reimage [style]` | Regenerate scene image (optional custom style overrides constraints) |
 | `/images`          | Toggle image generation on/off        |
 | `/gfx`             | Set gfx mode (sextant/halfblock/quadrant/pattern/luma/reset) |
 | `/dither`          | Set dither bits (1/2/8/reset)         |
+| `/mood [e1] [e2]`  | Set mood shader(s), up to 2 layered (off to clear) |
 | `/history`         | Show last 10 turns inline             |
+| `/cost [on\|off]`  | Toggle session token/cost display     |
 | `/help`            | Show command list                     |
 
 ## Image Interaction
@@ -228,7 +246,7 @@ Also available via `/gfx [mode]` and `/dither [bits]` commands. GFX settings are
 
 ### Fisheye Zoom
 
-Hovering the mouse over the scene image activates a fisheye zoom shader that magnifies the area around the cursor. Samples from the original full-resolution source image via `source.getOriginalPixel(u, v)` for sharper detail. Fades to black near the radius edge (75% to 100%). Deactivates on mouse leave; suppressed during loading shader.
+Hovering the mouse over the scene image activates a fisheye zoom shader (pipeline slot 3) that magnifies the area around the cursor. Samples from the original full-resolution source image via `source.getOriginalPixel(u, v)` for sharper detail. Fades to black near the radius edge (75% to 100%). Deactivates on mouse leave; suppressed during loading shader.
 
 ## UI Layout
 
@@ -335,12 +353,12 @@ Images are stored in cache (`image:{gameId}:{turnCount}`), not in game state. `c
 - **Language-aware**: all content generated in the player's language
 - **Split-pane layout**: image and narrative in a resizable vertical split-pane
 - **Image fills pane**: `height: fill` on image so it resizes with split-pane divider
-- **Shader tied to spinner**: single control point, no separate shader management
+- **Shader pipeline**: fixed-slot array `[mood1, mood2, loading, fisheye]` — independent slot management
 - **Log area always visible**: 5-row reserved space at bottom, no display toggle
 - **Configurable image skip**: set `MELKROX_SKIP_IMAGES=true` to skip image API calls (prompts still logged)
 - **AbortController**: new player input cancels in-flight image generation
 - **Turn lock**: `turnBusy` flag prevents concurrent AI turns; released after narrative renders but before image generation (player can type during image gen)
-- **Undo/redo**: `/undo` pops last turn onto redo stack, `/redo` replays it. Redo stack is cleared on new AI turns (branching)
+- **Undo/redo**: `/undo` pops last turn onto redo stack (aborts in-flight image gen), `/redo` replays it. Both restore mood shader(s). Redo stack is cleared on new AI turns (branching)
 - **Image not in state**: `currentImage` is runtime-only, loaded from cache on game load
 - **History pruning**: keep last 20 turn pairs in context
 - **Story threads**: world config includes narrative tensions woven organically into scenes, not explicit goals
@@ -351,7 +369,9 @@ Images are stored in cache (`image:{gameId}:{turnCount}`), not in game state. `c
 - **GFX mode cycling**: modifier+click image or use `/gfx` to switch between sextant, halfblock, quadrant, pattern, luma
 - **Session-only GFX settings**: gfx mode and dither bits not saved with game state
 - **Fisheye zoom on hover**: mouse over scene image activates fisheye shader sampling from hi-res source image
-- **Delayed image generation**: 1-second delay before image API call lets player skip it by acting quickly
+- **Delayed image generation**: 2-second delay before image API call lets player skip it by acting quickly
+- **Immediate save on turn**: state is saved right after scene is applied, before the image delay, so fast-clicking can't lose turns
+- **Stable image during turns**: loading shader activates on send, old image stays visible, new image swaps atomically on arrival (no flicker)
 - **Toast notifications**: user feedback via `$melker.toast` instead of log entries
 - **Screen switching preserves styles**: `showScreen()` spreads existing style to avoid overwriting `height: fill`
 - **Screen switching stops spinners**: `showScreen()` calls `.stop()` on all spinners and stops shader to prevent hidden animations

@@ -437,3 +437,8 @@ export type ShaderCallback = (
   source?: ShaderSource,
   utils?: ShaderUtils
 ) => [number, number, number] | [number, number, number, number];
+
+// Shader pipeline: single callback or array of callbacks executed in sequence.
+// Each stage reads from the previous stage's output (first stage reads from source image).
+// Array items may be null/undefined (no-ops, skipped automatically) for easy slot-based composition.
+export type ShaderPipeline = ShaderCallback | (ShaderCallback | null | undefined)[];

@@ -1,0 +1,72 @@
+<melker>
+    <title>Shader Effects</title>
+    <policy>{"permissions": {"read": ["*"], "shader": true}}</policy>
+
+    <container style="flex-direction: column; padding: 1; gap: 1">
+        <text bold="true">Built-in Shader Effects</text>
+        <container style="flex-direction: row; gap: 2">
+            <container style="flex-direction: column; align-items: center">
+                <text>fisheye (hover)</text>
+                <img src="../../melker-128.png" width="20" height="14" gfxMode="sextant" style="object-fit: contain" onShader="$melker.shaderEffects.fisheye()" shaderFps="24" />
+            </container>
+            <container style="flex-direction: column; align-items: center">
+                <text>bloom</text>
+                <img src="../../melker-128.png" width="20" height="14" gfxMode="sextant" style="object-fit: contain" onShader="$melker.shaderEffects.bloom()" shaderFps="12" />
+            </container>
+            <container style="flex-direction: column; align-items: center">
+                <text>rain</text>
+                <img src="../../melker-128.png" width="20" height="14" gfxMode="sextant" style="object-fit: contain" onShader="$melker.shaderEffects.rain()" shaderFps="12" />
+            </container>
+            <container style="flex-direction: column; align-items: center">
+                <text>fire</text>
+                <img src="../../melker-128.png" width="20" height="14" gfxMode="sextant" style="object-fit: contain" onShader="$melker.shaderEffects.fire()" shaderFps="12" />
+            </container>
+        </container>
+        <container style="flex-direction: row; gap: 2">
+            <container style="flex-direction: column; align-items: center">
+                <text>snow</text>
+                <img src="../../melker-128.png" width="20" height="14" gfxMode="sextant" style="object-fit: contain" onShader="$melker.shaderEffects.snow()" shaderFps="12" />
+            </container>
+            <container style="flex-direction: column; align-items: center">
+                <text>fog</text>
+                <img src="../../melker-128.png" width="20" height="14" gfxMode="sextant" style="object-fit: contain" onShader="$melker.shaderEffects.fog()" shaderFps="12" />
+            </container>
+            <container style="flex-direction: column; align-items: center">
+                <text>magic</text>
+                <img src="../../melker-128.png" width="20" height="14" gfxMode="sextant" style="object-fit: contain" onShader="$melker.shaderEffects.magic()" shaderFps="12" />
+            </container>
+            <container style="flex-direction: column; align-items: center">
+                <text>darkness</text>
+                <img src="../../melker-128.png" width="20" height="14" gfxMode="sextant" style="object-fit: contain" onShader="$melker.shaderEffects.darkness()" shaderFps="12" />
+            </container>
+        </container>
+        <container style="flex-direction: row; gap: 2">
+            <container style="flex-direction: column; align-items: center">
+                <text>underwater</text>
+                <img src="../../melker-128.png" width="20" height="14" gfxMode="sextant" style="object-fit: contain" onShader="$melker.shaderEffects.underwater()" shaderFps="12" />
+            </container>
+            <container style="flex-direction: column; align-items: center">
+                <text>heat</text>
+                <img src="../../melker-128.png" width="20" height="14" gfxMode="sextant" style="object-fit: contain" onShader="$melker.shaderEffects.heat()" shaderFps="12" />
+            </container>
+            <container style="flex-direction: column; align-items: center">
+                <text>glitch</text>
+                <img src="../../melker-128.png" width="20" height="14" gfxMode="sextant" style="object-fit: contain" onShader="$melker.shaderEffects.glitch()" shaderFps="12" />
+            </container>
+            <container style="flex-direction: column; align-items: center">
+                <text>sandstorm</text>
+                <img src="../../melker-128.png" width="20" height="14" gfxMode="sextant" style="object-fit: contain" onShader="$melker.shaderEffects.sandstorm()" shaderFps="12" />
+            </container>
+        </container>
+        <container style="flex-direction: row; gap: 2">
+            <container style="flex-direction: column; align-items: center">
+                <text>lightning</text>
+                <img src="../../melker-128.png" width="20" height="14" gfxMode="sextant" style="object-fit: contain" onShader="$melker.shaderEffects.lightning()" shaderFps="12" />
+            </container>
+            <container style="flex-direction: column; align-items: center">
+                <text>sunrays</text>
+                <img src="../../melker-128.png" width="20" height="14" gfxMode="sextant" style="object-fit: contain" onShader="$melker.shaderEffects.sunrays()" shaderFps="12" />
+            </container>
+        </container>
+    </container>
+</melker>

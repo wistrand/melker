@@ -173,6 +173,9 @@ export interface MelkerContext {
   // Cache API
   cache: import('./core-types.ts').EngineCacheAPI;
 
+  // Built-in shader effects (fisheye, rain, bloom, etc.)
+  shaderEffects: Record<string, (opts?: Record<string, unknown>) => import('./components/canvas-shader.ts').ShaderCallback>;
+
   // I18n (when <messages> elements or i18n config present)
   i18n?: I18n;
 

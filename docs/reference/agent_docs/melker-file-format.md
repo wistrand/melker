@@ -244,9 +244,9 @@ const filePath = argv[1];
 | `<li>`                          | style                                                                              | List item                                 |
 | `<tabs>`                        | id, activeTab, onChange                                                            | Tabbed container                          |
 | `<tab>`                         | title, disabled                                                                    | Tab panel, defaults to flex column        |
-| `<canvas>`                      | width, height, dither, ditherBits, onPaint, onShader, onFilter, shaderFps, shaderRunTime | Pixel graphics (sextant/quadrant chars) |
+| `<canvas>`                      | width, height, dither, ditherBits, onPaint, onShader, onFilter, shaderFps, shaderRunTime | Pixel graphics (sextant/quadrant chars). onShader/onFilter accept `ShaderCallback \| ShaderCallback[]` (pipeline arrays with null slots). |
 | `<tile-map>`                    | lat, lon, zoom, provider, interactive, onOverlay, onTooltip, onMove, onZoom | Interactive slippy map (extends canvas, needs `map: true` policy) |
-| `<img>`                         | src, alt, width, height, dither, onLoad, onError, onShader, onFilter, shaderFps, shaderRunTime | Image display (extends canvas) |
+| `<img>`                         | src, alt, width, height, dither, onLoad, onError, onShader, onFilter, shaderFps, shaderRunTime | Image display (extends canvas). onShader/onFilter accept pipeline arrays. |
 | `<markdown>`                    | src, text, onLink                                                                  | Markdown text rendering with image support |
 | `<combobox>`                    | placeholder, filter, onSelect, maxVisible                                          | Dropdown with text filter                 |
 | `<select>`                      | value, onSelect, maxVisible                                                        | Dropdown picker (no filter)               |

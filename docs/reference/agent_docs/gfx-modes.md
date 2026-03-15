@@ -163,7 +163,7 @@ True pixel graphics via DEC Sixel protocol - native pixel rendering without char
 
 **Palette modes:**
 - `cached` - Static images (`<img>` without callbacks): compute once, reuse forever
-- `keyframe` - Dynamic content (video, `onShader`, `onPaint`, `onFilter`): cache palette, re-index frames, regenerate on >2% color drift
+- `keyframe` - Dynamic content (video, `onShader`, `onPaint`, `onFilter`; including shader pipeline arrays): cache palette, re-index frames, regenerate on >2% color drift
 - `dynamic` - Available but not used (keyframe preferred for performance)
 
 **Pre-quantization dithering** (dynamic content only):

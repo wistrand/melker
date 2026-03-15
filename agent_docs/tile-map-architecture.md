@@ -60,7 +60,7 @@ Element -> CanvasElement -> TileMapElement
 | `onZoom`           | `(event) => void`          | —               | Fires when zoom level changes                           |
 | `onClick`          | `(event) => void`          | —               | Fires on map click with lat/lon                         |
 | `onLoadingChange`  | `(event) => void`          | —               | Fires when tile loading count changes                   |
-| `onShader`         | `ShaderCallback`           | —               | Per-pixel post-processing (inherited from CanvasElement)|
+| `onShader`         | `ShaderPipeline`           | —               | Per-pixel post-processing (inherited from CanvasElement). Accepts single callback or pipeline array with null slots. |
 | `shaderFps`        | `number`                   | `30`            | Shader frame rate; `0` for static filter                |
 | `shaderRunTime`    | `number`                   | —               | Stop shader after N ms                                  |
 

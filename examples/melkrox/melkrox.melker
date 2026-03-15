@@ -206,10 +206,12 @@
 </dialog>
 
 <dialog id="help-dialog" title="Commands" open="false" width="55" height="18" draggable="true" closable="true" backdrop="false">
-  <markdown text="- Type anything to interact with the world
+  <container style="overflow: scroll; height: fill; padding: 1;">
+    <markdown text="- Type anything to interact with the world
 - `/new` — Start a new game
 - `/games` — Switch between saved games
 - `/state` — Show world facts (AI's long-term memory)
+- `/story` — Full story recap with images
 - `/history` — Show recent turns
 - `/undo` — Go back one turn
 - `/redo` — Go forward one turn
@@ -218,7 +220,10 @@
 - `/images` — Toggle image generation on/off
 - `/gfx [mode]` — Set gfx mode (sextant/halfblock/quadrant/pattern/luma/reset)
 - `/dither [bits]` — Set dither bits (1/2/4/8/reset)
-- `/help` — Show this help" style="padding: 1;" />
+- `/mood [effect] [effect]` — Set mood shader(s), up to 2 layered (lightning/rain/bloom/sunrays/glitch/fog/fire/underwater/snow/darkness/sandstorm/magic/heat/off)
+- `/cost [on|off]` — Toggle session token/cost display
+- `/help` — Show this help" />
+  </container>
 </dialog>
 
 <!-- Game screen -->
@@ -240,6 +245,7 @@
   </container>
     <container style="padding-left: 2"><spinner id="game-spinner" variant="dots" verbs="thinking" spinning="false" shade="true" style="visibility: hidden; padding-left: 2;" /></container>
   <container id="log-area"></container>
+  <text id="cost-bar" style="display: none; padding-left: 2; color: var(--theme-text-muted);"></text>
 </container>
 
 <script>
@@ -258,6 +264,7 @@ let visionModel = '';
 let gameState = null;
 let currentGameId = null;
 let currentImage = null; // Scene image data URL (not saved in game state)
+let lastRenderedImage = null; // Track which image was last rendered to detect new arrivals
 let gamesIndex = []; // [{id, title, turnCount, location, lastPlayed}]
 let imageAbort = null; // AbortController for in-flight image request
 let skipImages = false;
@@ -271,6 +278,20 @@ function trackUsage(usage) {
   sessionTokens.prompt += usage.prompt_tokens || 0;
   sessionTokens.completion += usage.completion_tokens || 0;
   if (usage.cost) sessionCost += usage.cost;
+  updateCostBar();
+}
+
+function updateCostBar() {
+  const bar = $melker.getElementById('cost-bar');
+  if (bar.props.style?.display === 'none') return;
+  const totalTokens = sessionTokens.prompt + sessionTokens.completion;
+  if (totalTokens === 0) { bar.props.text = ''; return; }
+  const parts = [
+    (sessionTokens.prompt / 1000).toFixed(1) + 'k in',
+    (sessionTokens.completion / 1000).toFixed(1) + 'k out'
+  ];
+  if (sessionCost > 0) parts.push('$' + sessionCost.toFixed(4));
+  bar.props.text = parts.join(' | ');
 }
 
 function usageSuffix() {
@@ -383,6 +404,7 @@ export async function loadGame(id) {
   try {
     gameState = JSON.parse(decoder.decode(data));
     currentGameId = id;
+    setMoodShader(gameState.mood || null, true);
     // Load current image from cache
     currentImage = null;
     const imgKey = 'image:' + id + ':' + gameState.turnCount;
@@ -731,6 +753,10 @@ export async function startGame() {
       gameState.currentScene = opening;
     }
 
+    // Show narrative and choices while image generates
+    renderScene();
+    $melker.render();
+
     // Generate opening image
     await generateSceneImage(logId);
 
@@ -766,6 +792,7 @@ export async function handleInput() {
     gameState = null;
     currentGameId = null;
     currentImage = null;
+    setMoodShader(null, true);
     showSetupScreen();
     return;
   }
@@ -773,6 +800,7 @@ export async function handleInput() {
     gameState = null;
     currentGameId = null;
     currentImage = null;
+    setMoodShader(null, true);
     showSelectScreen();
     $melker.render();
     return;
@@ -783,6 +811,8 @@ export async function handleInput() {
   }
   if (cmd === '/undo') {
     if (gameState.history.length >= 2) {
+      // Cancel any in-flight image generation for the turn being undone
+      if (imageAbort) { imageAbort.abort(); imageAbort = null; }
       // Save undone pair + current facts snapshot to redo stack
       const assistant = gameState.history.pop();
       const user = gameState.history.pop();
@@ -805,13 +835,19 @@ export async function handleInput() {
           if (scene.choices) gameState.choices = scene.choices.map(c => typeof c === 'string' ? c : (c.label || c.text || String(c)));
           gameState.sceneImagePrompt = scene.imagePrompt || null;
           gameState._lastSceneImageStyle = scene.imageStyle || null;
+          gameState.mood = scene.mood || null;
+          setMoodShader(gameState.mood, true);
         } else {
           gameState.currentScene = lastAssistant.content;
+          gameState.mood = null;
+          setMoodShader(null, true);
         }
       } else {
         gameState.currentScene = '*Back to the beginning...*';
         gameState.choices = [];
         gameState.sceneImagePrompt = null;
+        gameState.mood = null;
+        setMoodShader(null, true);
       }
       // Restore cached image for this turn (clear first to avoid stale image)
       currentImage = null;
@@ -844,8 +880,12 @@ export async function handleInput() {
         if (scene.choices) gameState.choices = scene.choices.map(c => typeof c === 'string' ? c : (c.label || c.text || String(c)));
         gameState.sceneImagePrompt = scene.imagePrompt || null;
         gameState._lastSceneImageStyle = scene.imageStyle || null;
+        gameState.mood = scene.mood || null;
+        setMoodShader(gameState.mood, true);
       } else {
         gameState.currentScene = entry.assistant.content;
+        gameState.mood = null;
+        setMoodShader(null, true);
       }
       // Restore cached image for this turn
       currentImage = null;
@@ -968,6 +1008,88 @@ export async function handleInput() {
     renderScene();
     return;
   }
+  if (cmd === '/story') {
+    try {
+      const title = gameState.worldConfig?.title || 'Untitled';
+      const htmlParts = [];
+      htmlParts.push('<!DOCTYPE html><html><head><meta charset="utf-8">');
+      htmlParts.push('<title>' + title + '</title>');
+      htmlParts.push('<style>');
+      htmlParts.push('body{max-width:720px;margin:0 auto;padding:2em;font-family:Georgia,serif;background:#111;color:#ddd;line-height:1.7}');
+      htmlParts.push('h1{text-align:center;color:#e8c56d;border-bottom:2px solid #333;padding-bottom:0.5em}');
+      htmlParts.push('h3{color:#b8a040;margin-top:2em}');
+      htmlParts.push('.location{color:#888;font-style:italic;margin-bottom:0.5em}');
+      htmlParts.push('.action{background:#1a1a2a;border-left:3px solid #556;padding:0.5em 1em;margin:1em 0;color:#aab}');
+      htmlParts.push('img{width:100%;border-radius:6px;margin:0.5em 0}');
+      htmlParts.push('hr{border:none;border-top:1px solid #333;margin:2em 0}');
+      htmlParts.push('</style></head><body>');
+      htmlParts.push('<h1>' + title + '</h1>');
+      let turnNum = 0;
+      for (let i = 0; i < gameState.history.length; i++) {
+        const entry = gameState.history[i];
+        if (entry.role === 'assistant') {
+          turnNum++;
+          const parsed = parseJSON(entry.content);
+          const narrative = parsed ? parsed.narrative : entry.content;
+          const imgKey = currentGameId ? 'image:' + currentGameId + ':' + turnNum : 'image:' + turnNum;
+          const cachedImg = await $melker.cache.read(CACHE_NS, imgKey);
+          htmlParts.push('<hr><h3>Turn ' + turnNum + '</h3>');
+          if (parsed?.location) htmlParts.push('<div class="location">' + parsed.location + '</div>');
+          if (cachedImg) htmlParts.push('<img src="' + decoder.decode(cachedImg) + '">');
+          htmlParts.push('<p>' + (narrative || '').replace(/\n/g, '</p><p>') + '</p>');
+        } else if (entry.role === 'user') {
+          const actionMatch = entry.content.match(/<ACTION>([\s\S]*?)<\/ACTION>/);
+          const action = actionMatch ? actionMatch[1].trim() : entry.content;
+          if (turnNum > 0) htmlParts.push('<div class="action">' + action + '</div>');
+        }
+      }
+      // Append current turn if not already in history
+      if (gameState.currentScene && turnNum < gameState.turnCount) {
+        turnNum = gameState.turnCount;
+        const imgKey = currentGameId ? 'image:' + currentGameId + ':' + turnNum : 'image:' + turnNum;
+        const cachedImg = await $melker.cache.read(CACHE_NS, imgKey);
+        htmlParts.push('<hr><h3>Turn ' + turnNum + '</h3>');
+        if (gameState.location) htmlParts.push('<div class="location">' + gameState.location + '</div>');
+        if (cachedImg) htmlParts.push('<img src="' + decoder.decode(cachedImg) + '">');
+        else if (currentImage) htmlParts.push('<img src="' + currentImage + '">');
+        htmlParts.push('<p>' + gameState.currentScene.replace(/\n/g, '</p><p>') + '</p>');
+      }
+      htmlParts.push('</body></html>');
+      const storyPath = $melker.cacheDir + '/story.html';
+      await Deno.writeTextFile(storyPath, htmlParts.join('\n'));
+      $melker.openBrowser(storyPath);
+      log(logId, 'Story opened in browser (' + turnNum + ' turns)');
+    } catch (e) {
+      $melker.toast.show('Failed to generate story: ' + e.message, { type: 'error' });
+    }
+    return;
+  }
+
+  if (cmd.startsWith('/mood')) {
+    const args = cmd.slice(5).trim().toLowerCase().split(/[\s,+]+/).filter(Boolean);
+    if (!args.length || args[0] === 'off' || args[0] === 'none') {
+      setMoodShader(null);
+      log(logId, 'Mood off');
+    } else {
+      const valid = args.filter(n => MOOD_SHADERS[n]).slice(0, 2);
+      if (valid.length) {
+        setMoodShader(valid, true);
+        log(logId, 'Mood: ' + valid.join(' + '));
+      } else {
+        log(logId, 'Available: ' + Object.keys(MOOD_SHADERS).join(', '));
+      }
+    }
+    return;
+  }
+
+  if (cmd === '/cost' || cmd === '/cost on' || cmd === '/cost off') {
+    const bar = $melker.getElementById('cost-bar');
+    const on = cmd === '/cost' ? bar.props.style?.display === 'none' : cmd === '/cost on';
+    bar.props.style = { ...bar.props.style, display: on ? 'flex' : 'none' };
+    if (on) updateCostBar();
+    log(logId, 'Cost display ' + (on ? 'on' : 'off'));
+    return;
+  }
 
   // Unknown / commands — don't send to AI
   if (cmd.startsWith('/')) {
@@ -992,6 +1114,7 @@ export async function handleInput() {
   turnBusy = true;
   clearLog(logId);
   setSpinner('game-spinner', true);
+  setImageLoading(true);
 
   try {
     // Wrap user input with game state context
@@ -1051,19 +1174,22 @@ export async function handleInput() {
       log(logId, 'Raw text response (no structured JSON)');
     }
 
+    // Save state immediately so fast-clicking doesn't lose turns
+    await saveState();
+
     // Release turn lock — player can input next turn while image generates
     turnBusy = false;
     focusInput();
 
-    // Delay image generation 1s so player can quickly send next action to skip it
-    await new Promise(r => setTimeout(r, 1000));
+    // Delay image generation 2s so player can quickly send next action to skip it
+    await new Promise(r => setTimeout(r, 2000));
     if (turnBusy) return; // player already started next turn
     // Generate scene image in background (abortable by next turn)
     await generateSceneImage(logId);
 
     if (gameState) {
-      await saveState();
-      log(logId, 'Turn ' + gameState.turnCount + ' complete. State saved.');
+      await saveState(); // re-save with cached image key
+      log(logId, 'Turn ' + gameState.turnCount + ' complete.');
       renderScene();
     }
   } catch (e) {
@@ -1077,6 +1203,7 @@ export async function handleInput() {
 
   turnBusy = false;
   setSpinner('game-spinner', false);
+  setImageLoading(false);
   $melker.render();
   focusInput();
 }
@@ -1129,6 +1256,9 @@ function applyScene(scene) {
   // Per-scene image style override (cleared each turn, only set if model provides one)
   gameState._lastSceneImageStyle = scene.imageStyle || null;
   if (scene.imageStyle) logger.info('Scene image style override: ' + scene.imageStyle);
+  // Mood shader(s) — triggered by "mood" field from narrator (string or array)
+  gameState.mood = scene.mood || null;
+  setMoodShader(gameState.mood);
   logger.debug('Scene applied | location=' + gameState.location + ' inventory=[' + gameState.inventory.join(', ') + '] choices=' + (gameState.choices?.length || 0) + ' narrative=' + (gameState.currentScene?.length || 0) + ' chars');
   // Apply state updates (facts) — all keys normalized to lowercase
   if (scene.stateUpdates && Array.isArray(scene.stateUpdates)) {
@@ -1169,14 +1299,10 @@ let ditherBitsIndex = 2; // default 8
 let imageClickAbort = null;
 
 export async function handleImageClick(event) {
-  // Clear fisheye shader immediately on click
+  // Clear fisheye on click, keep mood if active
   if (fisheyeActive) {
     fisheyeActive = false;
-    const fImg = $melker.getElementById('scene-image');
-    fImg.stopShader();
-    fImg.props.onShader = undefined;
-    fImg.clear();
-    fImg.refreshImage();
+    updateShaderPipeline();
   }
   const imgEl = $melker.getElementById('scene-image');
   const pos = event.position || {};
@@ -1292,8 +1418,9 @@ export async function handleImageClick(event) {
     spinner.stop();
     spinner.props.style = { ...spinner.props.style, visibility: 'hidden' };
     // Re-activate fisheye if mouse is still over the image
-    if (mouseOverImage && !fisheyeActive) {
-      handleImageMouseOver();
+    if (mouseOverImage && !fisheyeActive && currentImage) {
+      fisheyeActive = true;
+      updateShaderPipeline();
     }
     $melker.render();
   }
@@ -1343,94 +1470,82 @@ export function loadingShader(x, y, time, resolution, source, utils) {
   return [Math.min(255, pr), Math.min(255, pg), Math.min(255, pb)];
 }
 
-// Fisheye zoom shader — activates on mouseover, samples from original hi-res image
-export function fisheyeShader(x, y, time, resolution, source, utils) {
-  const mx = source.mouse?.x ?? -1;
-  const my = source.mouse?.y ?? -1;
-  if (mx < 0 || my < 0) {
-    return source?.getPixel(x, y);
-  }
-  const radius = Math.min(resolution.width, resolution.height) * 0.72;
-  const fadeStart = 0.75; // fade begins at 75% of radius
-  const dx = x - mx;
-  const dyRaw = y - my;
-  const aspect = resolution.pixelAspect || 0.5;
-  const dy = dyRaw / aspect; // aspect-correct for distance calc
-  const dist2 = dx * dx + dy * dy;
-  const r2 = radius * radius;
-  if (dist2 > r2) {
-    return source?.getPixel(x, y);
-  }
-  if (dist2 < 1) {
-    // Dead center — sample directly at mouse position
-    if (source.originalWidth > 0) return source.getOriginalPixel(mx / resolution.width, my / resolution.height);
-    return source?.getPixel(mx, my);
-  }
-  // Fisheye via vector math — no trig needed
-  const dist = Math.sqrt(dist2);
-  const norm = dist / radius;
-  const scale = Math.pow(norm, 0.18) / 2.3; // exponent=1.18, zoom=2.3
-  const sx = mx + dx * scale;
-  const sy = my + dyRaw * scale;
-  let pixel;
-  if (source.originalWidth > 0) {
-    const u = sx / resolution.width;
-    const v = sy / resolution.height;
-    if (u < 0 || u >= 1 || v < 0 || v >= 1) return [0, 0, 0];
-    pixel = source.getOriginalPixel(u, v);
-  } else {
-    const isx = Math.round(sx);
-    const isy = Math.round(sy);
-    if (isx < 0 || isx >= resolution.width || isy < 0 || isy >= resolution.height) return [0, 0, 0];
-    pixel = source.getPixel(isx, isy);
-  }
-  if (!pixel) return [0, 0, 0];
-  // Fade to black near the edge
-  if (norm > fadeStart) {
-    const fade = 1 - (norm - fadeStart) / (1 - fadeStart); // 1 at fadeStart, 0 at radius
-    return [pixel[0] * fade, pixel[1] * fade, pixel[2] * fade];
-  }
-  return pixel;
-}
+// Pre-instantiate effect shaders from engine (factories return ShaderCallback)
+const MOOD_SHADERS = {
+  lightning: $melker.shaderEffects.lightning(),
+  rain: $melker.shaderEffects.rain(),
+  bloom: $melker.shaderEffects.bloom(),
+  sunrays: $melker.shaderEffects.sunrays(),
+  glitch: $melker.shaderEffects.glitch(),
+  fog: $melker.shaderEffects.fog(),
+  fire: $melker.shaderEffects.fire(),
+  underwater: $melker.shaderEffects.underwater(),
+  snow: $melker.shaderEffects.snow(),
+  darkness: $melker.shaderEffects.darkness(),
+  sandstorm: $melker.shaderEffects.sandstorm(),
+  magic: $melker.shaderEffects.magic(),
+  heat: $melker.shaderEffects.heat(),
+};
+
+const fisheyeShaderFn = $melker.shaderEffects.fisheye();
 
 let fisheyeActive = false;
 let mouseOverImage = false;
+let activeMoods = []; // 0-2 mood shader names
+
+// Fixed-slot shader pipeline: [mood1, mood2, loading, fisheye]. Null slots are no-ops.
+const shaderPipeline = [null, null, null, null];
+
+function updateShaderPipeline() {
+  shaderPipeline[0] = activeMoods[0] && MOOD_SHADERS[activeMoods[0]] ? MOOD_SHADERS[activeMoods[0]] : null;
+  shaderPipeline[1] = activeMoods[1] && MOOD_SHADERS[activeMoods[1]] ? MOOD_SHADERS[activeMoods[1]] : null;
+  // slot [2] (loading) is managed by setImageLoading
+  shaderPipeline[3] = fisheyeActive ? fisheyeShaderFn : null;
+  const imgEl = $melker.getElementById('scene-image');
+  imgEl.stopShader();
+  imgEl.clear();
+  imgEl.refreshImage();
+  imgEl.props.onShader = shaderPipeline.some(s => s) ? shaderPipeline : undefined;
+  imgEl.props.shaderFps = fisheyeActive ? 24 : shaderPipeline[2] ? 10 : 12;
+}
+
+function setMoodShader(moods, immediate) {
+  // Normalize to array of valid mood names (max 2)
+  const names = (Array.isArray(moods) ? moods : moods ? [moods] : [])
+    .filter(n => n && MOOD_SHADERS[n])
+    .slice(0, 2);
+  activeMoods = names;
+  if (names.length > 0) {
+    if (immediate && currentImage) {
+      updateShaderPipeline();
+    }
+    logger.info('Mood shaders: ' + names.join(', '));
+  } else {
+    updateShaderPipeline();
+  }
+}
 
 export function handleImageMouseOver() {
   mouseOverImage = true;
   if (fisheyeActive) return;
-  const imgEl = $melker.getElementById('scene-image');
-  if (imgEl.props.onShader === $app.loadingShader) return; // don't override loading shader
-  if (!currentImage) return; // no image to zoom
+  if (!currentImage) return;
   fisheyeActive = true;
-  imgEl.props.onShader = $app.fisheyeShader;
-  imgEl.props.shaderFps = 24;
+  updateShaderPipeline();
 }
 
 export function handleImageMouseOut() {
   mouseOverImage = false;
   if (!fisheyeActive) return;
   fisheyeActive = false;
-  const imgEl = $melker.getElementById('scene-image');
-  imgEl.stopShader();
-  imgEl.props.onShader = undefined;
-  imgEl.clear();
-  imgEl.refreshImage();
+  updateShaderPipeline();
 }
 
 function setImageLoading(on) {
   shaderTint = null; // reset so next activation re-samples
-  fisheyeActive = false; // clear fisheye state
-  const imgEl = $melker.getElementById('scene-image');
-  if (on) {
-    imgEl.props.onShader = $app.loadingShader;
-    imgEl.props.shaderFps = 10;
-  } else {
-    imgEl.stopShader();
-    imgEl.props.onShader = undefined;
-    imgEl.clear();
-    imgEl.refreshImage();
-  }
+  if (on && shaderPipeline[2] === $app.loadingShader) return; // already loading
+  if (on) fisheyeActive = false; // image is changing, clear fisheye
+  shaderPipeline[2] = on ? $app.loadingShader : null;
+  updateShaderPipeline();
 }
 
 // --- Scene Image Generation ---
@@ -1450,7 +1565,10 @@ async function generateSceneImage(logId, customStyle) {
     const constraints = customStyle
       ? customStyle
       : (gameState.worldConfig?.imageConstraints || defaultConstraints);
-    const styleBlock = constraints + '\n' + (activeStyle ? activeStyle + '\n' : '');
+    // Custom style is a full override — don't append world imageStyle
+    const styleBlock = customStyle
+      ? constraints + '\n'
+      : constraints + '\n' + (activeStyle ? activeStyle + '\n' : '');
 
     // Use LLM-generated image prompt if available, fall back to scene narrative
     const sceneDesc = gameState.sceneImagePrompt || gameState.currentScene || '';
@@ -1572,11 +1690,13 @@ Always respond with ONLY a JSON object (no markdown fences) in this exact format
   "choices": ["short action 1", "short action 2", "short action 3"],
   "imagePrompt": "What the scene image should show — focus on action, composition, environment, and mood. 1-3 sentences.",
   "imageStyle": "optional override",
+  "mood": "optional atmosphere effect(s) — string or [string, string] (max 2)",
   "stateUpdates": [{"set": "key", "value": "value"}, {"delete": "key"}]
 }
 Keep narratives SHORT (2-4 sentences). Focus on what happens — action, dialogue, discovery, consequences. Describe a character's appearance when they first appear, but do not repeat it in subsequent scenes. Choice labels under 6 words. Small terminal window — brevity is essential.
 imagePrompt is REQUIRED — describe what the scene image should show. Lead with ACTION, COMPOSITION, and ENVIRONMENT — what's happening, where, the mood. For each character in the scene, include a brief visual tag (e.g. "copper-haired woman in a denim jacket") but do NOT dump their full appearance description. Keep it cinematic: think camera angle, framing, atmosphere. 1-3 sentences. Example: "A copper-haired woman in a denim jacket crouches behind a shipping crate on a rain-soaked dock, peering at two guards by the warehouse door. Harsh sodium lights cast long shadows across wet concrete."
 imageStyle is OPTIONAL — only include if this scene's mood deviates significantly from the game's default visual style (e.g. a sudden dream sequence, a flashback, a tonal shift). Omit for normal scenes.
+mood is OPTIONAL — triggers animated atmosphere effect(s) on the scene image. Use sparingly for dramatic moments. Can be a single string or an array of up to 2 effects that layer together (e.g. ["rain", "darkness"] for dark rainstorm, ["fog", "magic"] for enchanted mist). Available: "lightning" (storm bolts), "rain" (falling streaks), "bloom" (warm glow), "sunrays" (golden beams), "glitch" (digital distortion), "fog" (drifting mist), "fire" (flickering from below), "underwater" (blue-green caustics), "snow" (drifting flakes, cold tint), "darkness" (heavy vignette, low visibility), "sandstorm" (horizontal orange haze), "magic" (shimmering sparkles, color shifts), "heat" (rising shimmer distortion). Omit or null for no effect. Each turn replaces the previous.
 </RESPONSE_FORMAT>
 
 <STATE_TRACKING>
@@ -1652,7 +1772,7 @@ Respond with ONLY a JSON object (no markdown fences) with these fields:
 - protagonist: object with name, appearance (2-3 sentences describing the player character's physical appearance — MUST include gender, approximate age, hair color/style, skin tone, build/height, and clothing. Be specific enough to generate a consistent image every time, e.g. "A tall, lean woman in her late twenties with short copper hair and pale freckled skin, wearing a faded denim jacket over a black turtleneck.")
 - threads: array of 3-5 story thread objects, each with: name (short label), description (1-2 sentences describing the driving force — could be tension, mystery, romance, humor, rivalry, friendship, ambition, or any narrative engine appropriate to the tone). NOT explicit goals — underlying narrative currents woven organically. Mix scales: one overarching thread, a few local/personal ones.
 - imageStyle: one sentence describing ONLY the visual palette, lighting, and mood for scene illustrations. NO scene-specific objects, props, or details — those come from the scene text. Examples: "Warm golden palette, soft diffused lighting, cozy mood" for slice-of-life, "Deep shadows, desaturated blues, oppressive atmosphere" for horror, "Bright saturated colors, dynamic contrast, playful energy" for comedy.
-- imageConstraints: technical rendering constraints for image generation. If the player's prompt suggests or implies a visual style — through explicit request, genre conventions, setting, or tone — generate constraints matching that style. For example, a noir detective story implies high-contrast black-and-white, a fairy tale implies soft watercolor, a cyberpunk setting implies neon-lit digital art. Set to null only if the prompt gives no stylistic cues at all. Always include "Wide 3:1 format" and "NO text". Examples: null (default — minimal detail for terminal rendering), "Wide 3:1 format. Photorealistic with cinematic depth of field. Strong shadows, sharp subject, soft background. NO text, NO crowds." for photorealistic, "Wide 3:1 format. Bold outlines, flat color fills, comic panel style. NO fine hatching, NO text." for comic.
+- imageConstraints: TECHNICAL rendering constraints ONLY — format, medium, line weight, what to avoid. Do NOT repeat palette, lighting, or mood here (that belongs in imageStyle). If the player's prompt suggests or implies a visual medium — through explicit request, genre conventions, setting, or tone — generate constraints for that medium. Set to null only if no stylistic cues at all. Always include "Wide 3:1 format" and "NO text". Examples: null (default), "Wide 3:1 format. Photorealistic. Cinematic depth of field. NO text, NO crowds.", "Wide 3:1 format. Bold outlines, flat color fills, comic panel style. NO fine hatching, NO text.", "Wide 3:1 format. Soft watercolor edges, translucent layers. NO sharp lines, NO text."
 - narratorPrompt: the creative narrator instructions for gameplay. Include the world setting, tone, NPC descriptions with motivations, and storytelling rules. The voice and language must match the tone — a comedy should encourage humor and wit, horror should encourage dread, romance should encourage chemistry. Include story threads and instruct the narrator to weave them naturally. NPCs are independent actors who pursue their agendas whether the player is present or not. Actions have consequences proportional to the tone.
 </OUTPUT_FORMAT>
 
@@ -1903,14 +2023,8 @@ function setSpinner(id, on, verbs) {
   spinner.props.spinning = on;
   if (verbs) spinner.props.verbs = verbs;
   spinner.props.style = { ...spinner.props.style, visibility: on ? 'visible' : 'hidden' };
-  // Tie image shader to game spinner state
-  if (id === 'game-spinner') {
-    if (on) {
-      setImageLoading(true);
-    } else {
-      setImageLoading(false);
-    }
-  }
+  // Don't tie loading shader to spinner — loading shader is managed explicitly
+  // at turn start and image completion to avoid flicker
 }
 
 
@@ -1955,12 +2069,16 @@ function renderScene() {
   const imgEl = $melker.getElementById('scene-image');
   if (currentImage) {
     imgEl.setSrc(currentImage);
-    // Stop shader after setting new src — avoids flash of unshaded old image
-    if (imgEl.props.onShader) setImageLoading(false);
-  } else if (!imgEl.props.onShader) {
-    // No image yet — load placeholder and show shader
+    // Clear loading shader only when a new image has arrived (not the stale old one)
+    if (shaderPipeline[2] && currentImage !== lastRenderedImage) {
+      setImageLoading(false);
+    }
+    lastRenderedImage = currentImage;
+  } else if (!shaderPipeline[2]) {
+    // No image yet — load placeholder and show loading shader
     imgEl.setSrc(PLACEHOLDER_IMG);
     setImageLoading(true);
+    lastRenderedImage = null;
   }
 
   $melker.getElementById('narrative').props.text = gameState.currentScene || '*Waiting...*';
@@ -2010,7 +2128,7 @@ $melker.registerAITool({
       characters: (wc.characters || []).map(c => ({ name: c.name, description: c.description })),
       protagonist: wc.protagonist ? { name: wc.protagonist.name } : null,
       threads: wc.threads,
-      commands: '/new, /games, /undo, /redo, /state, /image, /reimage [style], /images, /gfx [mode], /dither [bits], /history, /help',
+      commands: '/new, /games, /undo, /redo, /state, /story, /image, /reimage [style], /images, /gfx [mode], /dither [bits], /history, /help',
     };
   }
 });

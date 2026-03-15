@@ -1833,7 +1833,8 @@ The `<img>` component displays images in the terminal using sextant characters (
 | `ditherBits`     | number           | -       | Color depth for dithering (1-8)                                          |
 | `onLoad`         | function         | -       | Called when image loads successfully                                     |
 | `onError`        | function         | -       | Called when image fails to load                                          |
-| `onShader`       | function         | -       | Per-pixel shader callback (see Shaders section)                          |
+| `onShader`       | function/array   | -       | Per-pixel shader callback or pipeline array (see Shaders section)        |
+| `onFilter`       | function/array   | -       | One-time filter callback or pipeline, runs once on image load            |
 | `shaderFps`      | number           | 30      | Shader frame rate                                                        |
 | `shaderRunTime`  | number           | -       | Stop shader after this many ms, freeze final frame as image              |
 
@@ -1884,6 +1885,48 @@ The shader callback receives:
 
 Returns `[r, g, b]` or `[r, g, b, a]` (0-255 range).
 
+**Shader Pipeline**: `onShader` accepts a single callback or an array of callbacks executed in sequence. Each stage reads from the previous stage's output. Array items may be `null`/`undefined` (skipped), enabling fixed-slot composition:
+
+```javascript
+// Fixed-slot pipeline: [mood, overlay, fisheye]. Null slots are no-ops.
+const pipeline = [null, null, null];
+pipeline[0] = $melker.shaderEffects.rain();  // slot in/out by setting to null
+pipeline[2] = $melker.shaderEffects.fisheye();
+imgEl.props.onShader = pipeline;
+```
+
+**Built-in Shader Effects**: Available via `$melker.shaderEffects`. Each is a factory function that returns a shader callback with optional configuration:
+
+| Effect        | Description                               | Key Options                          |
+|---------------|-------------------------------------------|--------------------------------------|
+| `fisheye()`   | Mouse-following magnification lens        | `radius`, `zoom`, `exponent`         |
+| `lightning()`| Jagged bolt with sky flash                 | `boltDuration`, `flashIntensity`     |
+| `rain()`      | Vertical streaks with overcast dimming     | `dim`, `speed`                       |
+| `bloom()`     | Warm glow pulsing from bright areas        | `threshold`, `strength`              |
+| `sunrays()`   | Radial golden beams from upper corner      | `intensity`, `speed`                 |
+| `glitch()`    | Digital distortion, scanlines              | `period`, `displacement`             |
+| `fog()`       | Drifting misty overlay                     | `density`                            |
+| `fire()`      | Warm flickering glow from below            | `intensity`, `flickerSpeed`          |
+| `underwater()`| Blue-green tint with caustic ripples       | `depthFade`                          |
+| `snow()`      | Drifting flakes with cold blue tint        | `layers`, `speed`                    |
+| `darkness()`  | Heavy vignette, low visibility             | `radius`, `fadeWidth`                |
+| `sandstorm()` | Horizontal streaks with orange haze        | `windSpeed`, `haze`                  |
+| `magic()`     | Glowing motes drifting upward              | `cellSize`, `driftSpeed`             |
+| `heat()`      | Rising shimmer/haze distortion             | `shimmer`, `warmth`                  |
+
+```xml
+<!-- Use directly in templates — no script needed -->
+<img src="photo.png" onShader="$melker.shaderEffects.rain()" shaderFps="12" />
+<!-- Or with custom options -->
+<img src="photo.png" onShader="$melker.shaderEffects.rain({speed: 60, dim: 0.7})" shaderFps="12" />
+```
+
+**onFilter**: Same signature as `onShader` but runs once when the image loads (time is always 0). Also accepts pipeline arrays. Does **not** require `"shader": true` permission.
+
+```xml
+<img src="photo.png" onFilter="$app.grayscale" />
+```
+
 **Mouse tracking**: Automatic for elements with `onShader`. The `source.mouse` (pixel coords) and `source.mouseUV` (normalized 0-1) update automatically as the mouse moves over the element. Values are -1 when mouse is not over the element.
 
 **Aspect-correct circles/shapes**: Divide y by `pixelAspect`:
@@ -1893,7 +1936,7 @@ const dist = Math.sqrt(dx*dx + (dy/resolution.pixelAspect)**2);
 
 **shaderRunTime**: When set, the shader stops after the specified milliseconds and the final frame is preserved as a static image that supports resize.
 
-**Permission**: Requires `"shader": true` in the app's policy.
+**Permission**: `onShader` requires `"shader": true` in the app's policy. `onFilter` does not require shader permission.
 
 ### Behavior
 

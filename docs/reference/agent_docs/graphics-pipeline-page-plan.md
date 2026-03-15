@@ -30,7 +30,7 @@ These features control how `<img>` and `<canvas>` components convert pixel data 
 
 ## Example .melker Files
 
-Each example is self-contained. Policy: `{"permissions": {"read": ["*"]}}` for images, `{"permissions": {"shader": true}}` for shaders.
+Each example is self-contained. Policy: `{"permissions": {"read": ["*"]}}` for images and filters, `{"permissions": {"read": ["*"], "shader": true}}` for shaders. Note: `onFilter` does not require shader permission.
 
 ### gfx-modes.melker
 Four `<img>` components in a row, each with a different `gfxMode` prop: sextant, quadrant, halfblock, pattern. All render `melker-128.png` at 16x12 with `object-fit: contain`. No CLI `--gfx-mode` flag when generating output (per-element props must take effect).
@@ -41,8 +41,15 @@ Four `<img>` components showing dither algorithms: none, sierra-stable, atkinson
 ### shader.melker
 A `<canvas>` with `onShader` pointing to a plasma function using `utils.fbm` and `utils.palette`. Uses `gfxMode="sextant"`, `shaderFps="30"` and `shaderRunTime="500"` for stdout capture. Lower frequency params (`u * 2 + time * 0.5`, `v * 2 + time * 0.3`, `time * 0.2`). Requires `"shader": true` policy.
 
+`onShader` accepts a single callback or a pipeline array: `ShaderCallback | (ShaderCallback | null | undefined)[]`. Null slots in the array are skipped, enabling fixed-slot composition (e.g., `[mood1, mood2, loading, fisheye]`). 14 built-in shader effects are available via `$melker.shaderEffects`: fisheye, lightning, rain, bloom, sunrays, glitch, fog, fire, underwater, snow, darkness, sandstorm, magic, heat. Use in templates: `onShader="$melker.shaderEffects.rain()"`.
+
+### shader-effects.melker
+Showcases all 14 built-in shader effects applied to the same image. Uses `onShader="$melker.shaderEffects.<name>()"` directly in templates. Requires `"shader": true` policy.
+
 ### filter.melker
-Four `<img>` components with `onFilter` handlers: original (no filter), grayscale, invert, sepia. Each filter function receives `(x, y, time, resolution, source)` and returns `[r, g, b, a]`. Code-only section (no screenshot).
+Four `<img>` components with `onFilter` handlers: original (no filter), grayscale, invert, sepia. Each filter function receives `(x, y, time, resolution, source)` and returns `[r, g, b, a]`. No shader permission needed — filters are one-shot transforms.
+
+`onFilter` also supports pipeline arrays, same as `onShader`.
 
 ## Generating Terminal Output
 
@@ -92,12 +99,16 @@ Terminal output already generated and saved to:
 - `shaderFps` controls frame rate, `shaderRunTime` controls duration
 - Requires `"shader": true` in policy (CPU-intensive)
 - `resolution.pixelAspect` for aspect-correct effects
+- **Pipeline arrays**: `onShader` accepts `ShaderCallback | (ShaderCallback | null)[]` — null slots are no-ops for slot-based composition
+- **14 built-in effects** via `$melker.shaderEffects`: fisheye, lightning, rain, bloom, sunrays, glitch, fog, fire, underwater, snow, darkness, sandstorm, magic, heat
+- Template usage: `onShader="$melker.shaderEffects.rain()"`
 
 ### Filter section
 - `onFilter` runs once at image load (not animated)
 - Same signature as shader but `source.getPixel(x, y)` reads the loaded image
 - Common filters: grayscale, invert, sepia, color shift
-- No policy needed beyond `read` for the image file
+- No shader permission needed — filters are one-shot, not CPU-intensive
+- **Pipeline arrays**: `onFilter` also accepts pipeline arrays, same as `onShader`
 
 ### Mode comparison table
 

@@ -105,6 +105,9 @@ $melker: {
     stats(namespace: string): Promise<{ entries: number; totalBytes: number }>;
   };
 
+  // Built-in shader effects (see component-reference.md for full list)
+  shaderEffects: Record<string, (opts?: Record<string, unknown>) => ShaderCallback>;
+
   // OAuth
   oauth: any;
   oauthConfig: any;

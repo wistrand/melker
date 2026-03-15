@@ -1911,7 +1911,7 @@ imgEl.props.onShader = pipeline;
 | `snow()`      | Drifting flakes with cold blue tint        | `layers`, `speed`                    |
 | `darkness()`  | Heavy vignette, low visibility             | `radius`, `fadeWidth`                |
 | `sandstorm()` | Horizontal streaks with orange haze        | `windSpeed`, `haze`                  |
-| `magic()`     | Glowing motes drifting upward              | `cellSize`, `driftSpeed`             |
+| `magic()`     | Colored splash distortions drifting upward | `distortion`, `driftSpeed`           |
 | `heat()`      | Rising shimmer/haze distortion             | `shimmer`, `warmth`                  |
 
 ```xml

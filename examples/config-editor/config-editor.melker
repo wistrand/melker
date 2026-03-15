@@ -1,0 +1,338 @@
+<melker>
+
+<policy>
+{
+  "permissions": {
+    "read": ["~/.config/melker"],
+    "write": ["~/.config/melker"]
+  }
+}
+</policy>
+
+<style>
+  #root {
+    display: flex;
+    flex-direction: column;
+    height: fill;
+    padding: 1;
+  }
+  #title-bar {
+    font-weight: bold;
+    margin-bottom: 1;
+  }
+  #config-tabs {
+    flex: 1;
+  }
+  .field-row {
+    display: flex;
+    flex-direction: row;
+    margin-bottom: 0;
+  }
+  .field-label {
+    width: 28;
+  }
+  .field-source {
+    width: 14;
+    color: gray;
+    dim: true;
+  }
+  #bottom-bar {
+    display: flex;
+    flex-direction: row;
+    margin-top: 1;
+    gap: 2;
+  }
+</style>
+
+<container id="root">
+  <text id="title-bar">Melker Engine Configuration</text>
+  <tabs id="config-tabs">
+  </tabs>
+  <container id="bottom-bar">
+    <button id="save-btn" label="Save to config.json" onClick="$app.handleSave()" />
+    <button id="reset-btn" label="Reset All" onClick="$app.handleResetAll()" />
+    <text id="status-text" style="color: gray; dim: true"></text>
+  </container>
+</container>
+
+<script type="typescript">
+  const CE = $melker.createElement.bind($melker);
+
+  // Track edited values (key -> value)
+  const edits: Record<string, unknown> = {};
+
+  // Category for top-level keys without a dot prefix
+  const explicitCategory: Record<string, string> = {
+    'theme': 'General',
+    'theme.file': 'General',
+    'persist': 'General',
+    'lint': 'General',
+    'script.consoleOverride': 'General',
+  };
+
+  // Prefix -> category name
+  const prefixCategory: Record<string, string> = {
+    'log': 'Logging',
+    'ai': 'AI',
+    'render': 'Graphics',
+    'dither': 'Graphics',
+    'terminal': 'Terminal',
+    'video': 'Terminal',
+    'audio': 'Terminal',
+    'toast': 'Toast',
+    'server': 'Server',
+    'headless': 'Headless',
+    'stdout': 'Stdout',
+    'oauth': 'OAuth',
+    'i18n': 'i18n',
+    'bundler': 'Advanced',
+    'performance': 'Advanced',
+    'markdown': 'Advanced',
+    'assets': 'Advanced',
+  };
+
+  function getCategory(key: string): string {
+    if (explicitCategory[key]) return explicitCategory[key];
+    const prefix = key.split('.')[0];
+    return prefixCategory[prefix] || 'Other';
+  }
+
+  function sourceLabel(source: string | undefined): string {
+    switch (source) {
+      case 'file': return '<- config.json';
+      case 'env': return '<- env';
+      case 'cli': return '<- cli';
+      case 'policy': return '<- policy';
+      case 'runtime': return '<- runtime';
+      default: return '';
+    }
+  }
+
+  function updateStatus() {
+    const count = Object.keys(edits).length;
+    const el = $melker.getElementById('status-text');
+    if (el) el.props.text = count > 0 ? `${count} unsaved change${count !== 1 ? 's' : ''}` : '';
+    $melker.render();
+  }
+
+  export function handleFieldChange(key: string, value: unknown) {
+    edits[key] = value;
+    updateStatus();
+  }
+
+  export function handleSave() {
+    if (Object.keys(edits).length === 0) {
+      $melker.toast.show('No changes to save', { type: 'info' });
+      return;
+    }
+    try {
+      const count = $melker.config.save(edits);
+      $melker.toast.show(`Saved ${count} keys to config.json`, { type: 'success' });
+      for (const key of Object.keys(edits)) delete edits[key];
+      updateStatus();
+    } catch (err: any) {
+      $melker.toast.show(`Save failed: ${err.message}`, { type: 'error' });
+    }
+  }
+
+  export function handleResetAll() {
+    const schema = $melker.config.getSchema();
+    for (const [key, prop] of Object.entries(schema) as [string, any][]) {
+      if (key.startsWith('allow.') || key.startsWith('deny.')) continue;
+      if (prop.type === 'array') continue;
+      const defaultVal = prop.default;
+      if (defaultVal !== undefined) {
+        edits[key] = defaultVal;
+        // Update field
+        const el = $melker.getElementById(`field-${key}`);
+        if (el) {
+          if (prop.type === 'boolean') el.setValue(!!defaultVal);
+          else if (prop.enum || typeof defaultVal === 'string') el.setValue(String(defaultVal));
+          else if (typeof defaultVal === 'number') el.setValue(defaultVal);
+        }
+      }
+    }
+    $melker.toast.show('All fields reset to defaults', { type: 'info' });
+    updateStatus();
+  }
+
+  function buildTooltipFn(key: string, prop: any) {
+    return () => {
+      const value = $melker.config.getValue(key);
+      const source = $melker.config.getSource(key);
+      const displayValue = value === undefined ? '(not set)' :
+        typeof value === 'object' ? JSON.stringify(value) : String(value);
+      let md = `### ${key}\n`;
+      if (prop.description) md += `${prop.description}\n`;
+      md += `\n**Value:** \`${displayValue}\`\n`;
+      md += `**Source:** ${source || 'default'}\n`;
+      if (prop.env) md += `**Env:** \`${prop.env}\`\n`;
+      if (prop.flag) md += `**Flag:** \`${prop.flag}\`\n`;
+      if (prop.type) md += `**Type:** ${prop.type}\n`;
+      if (prop.default !== undefined) md += `**Default:** \`${String(prop.default)}\`\n`;
+      return md;
+    };
+  }
+
+  const themeNames = [
+    'auto',
+    'bw-std', 'bw-dark',
+    'gray-std', 'gray-dark',
+    'color16-std', 'color16-dark',
+    'color-std', 'color-dark',
+    'fullcolor-std', 'fullcolor-dark',
+  ];
+
+  function buildFieldComponent(key: string, prop: any, currentValue: unknown): any {
+    const fieldId = `field-${key}`;
+
+    // Theme gets a select with known theme names
+    if (key === 'theme') {
+      const options = themeNames.map((v: string) => CE('option', { value: v, label: v }));
+      return CE('select', {
+        id: fieldId,
+        selectedValue: String(currentValue ?? 'auto'),
+        onChange: (event: any) => handleFieldChange(key, event.value),
+        width: 24,
+      }, ...options);
+    }
+
+    if (prop.type === 'boolean') {
+      return CE('checkbox', {
+        id: fieldId,
+        title: '',
+        checked: !!currentValue,
+        onChange: (event: any) => handleFieldChange(key, event.checked),
+      });
+    }
+
+    if (prop.enum) {
+      const options = prop.enum.map((v: string) => CE('option', { value: v, label: v }));
+      return CE('select', {
+        id: fieldId,
+        selectedValue: String(currentValue ?? ''),
+        onChange: (event: any) => handleFieldChange(key, event.value),
+        width: 24,
+      }, ...options);
+    }
+
+    if ((prop.type === 'integer' || prop.type === 'number') && prop.minimum !== undefined && prop.maximum !== undefined) {
+      return CE('slider', {
+        id: fieldId,
+        min: prop.minimum,
+        max: prop.maximum,
+        value: Number(currentValue ?? prop.default ?? prop.minimum),
+        step: prop.type === 'integer' ? 1 : undefined,
+        showValue: true,
+        onChange: (event: any) => handleFieldChange(key, event.value),
+        width: 24,
+      });
+    }
+
+    // String, unbounded number, or object
+    let val = '';
+    if (currentValue !== undefined && currentValue !== null) {
+      val = typeof currentValue === 'object' ? JSON.stringify(currentValue) : String(currentValue);
+    }
+    return CE('input', {
+      id: fieldId,
+      value: val,
+      placeholder: '(not set)',
+      onInput: (event: any) => handleFieldChange(key, event.value),
+      width: 30,
+    });
+  }
+
+  export function buildForm() {
+    const schema = $melker.config.getSchema();
+    const rootEl = $melker.getElementById('root');
+    if (!rootEl) return;
+
+    // Group keys by category
+    const categories = new Map<string, Array<{ key: string; prop: any }>>();
+    const categoryOrder = ['General', 'Logging', 'AI', 'Graphics', 'Terminal', 'Toast', 'Server', 'Headless', 'Stdout', 'OAuth', 'i18n', 'Advanced'];
+
+    for (const [key, prop] of Object.entries(schema) as [string, any][]) {
+      if (key.startsWith('allow.') || key.startsWith('deny.')) continue;
+      if (prop.type === 'array') continue;
+      const cat = getCategory(key);
+      if (!categories.has(cat)) categories.set(cat, []);
+      categories.get(cat)!.push({ key, prop });
+    }
+
+    // Build tab elements with children
+    const tabChildren: any[] = [];
+    for (const catName of categoryOrder) {
+      const fields = categories.get(catName);
+      if (!fields) continue;
+
+      const rows: any[] = [];
+      for (const { key, prop } of fields) {
+        const currentValue = $melker.config.getValue(key);
+        const source = $melker.config.getSource(key);
+
+        const rowChildren: any[] = [
+          CE('text', { class: 'field-label', text: key, onTooltip: buildTooltipFn(key, prop) }),
+          buildFieldComponent(key, prop, currentValue),
+          CE('text', { class: 'field-source', text: sourceLabel(source) }),
+        ];
+        rows.push(CE('container', { class: 'field-row' }, ...rowChildren));
+      }
+
+      const tabId = `tab-${catName.toLowerCase()}`;
+      const scrollable = CE('container', {
+        scrollable: true,
+        focusable: true,
+        style: { flex: 1, overflowY: 'scroll', overflowX: 'hidden', width: 'fill', height: 'fill' },
+      }, ...rows);
+      tabChildren.push(CE('tab', { id: tabId, title: catName }, scrollable));
+    }
+
+    // Determine active tab from argv
+    let activeTab: string | undefined;
+    if (argv.length > 1) {
+      const target = argv[1].toLowerCase();
+      // Exact category match
+      for (const catName of categoryOrder) {
+        if (catName.toLowerCase() === target) {
+          activeTab = `tab-${target}`;
+          break;
+        }
+      }
+      // Key prefix match
+      if (!activeTab) {
+        for (const catName of categoryOrder) {
+          const fields = categories.get(catName);
+          if (!fields) continue;
+          for (const { key } of fields) {
+            if (key === target || key.startsWith(target + '.')) {
+              activeTab = `tab-${catName.toLowerCase()}`;
+              break;
+            }
+          }
+          if (activeTab) break;
+        }
+      }
+    }
+
+    // Create new tabs element with all children
+    const tabsProps: any = { id: 'config-tabs', style: 'flex: 1' };
+    if (activeTab) tabsProps.activeTab = activeTab;
+    const newTabs = CE('tabs', tabsProps, ...tabChildren);
+
+    // Replace the placeholder tabs in root
+    const rootChildren = rootEl.children || [];
+    const idx = rootChildren.findIndex((c: any) => c.id === 'config-tabs');
+    if (idx >= 0) {
+      rootChildren[idx] = newTabs;
+    }
+
+    $melker.render();
+  }
+</script>
+
+<script type="typescript" async="ready">
+  $app.buildForm();
+</script>
+
+</melker>

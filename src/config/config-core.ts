@@ -6,7 +6,7 @@ import schema from './schema.json' with { type: 'json' };
 import { Env } from '../env.ts';
 import { getConfigDir } from '../xdg.ts';
 import type { PolicyConfigProperty } from '../policy/types.ts';
-import { readTextFileSync, statSync } from '../runtime/mod.ts';
+import { readTextFileSync, writeTextFileSync, mkdirSync, statSync, isNotFoundError } from '../runtime/mod.ts';
 
 // Re-export for consumers that import from config
 export type { PolicyConfigProperty };
@@ -640,6 +640,83 @@ export class MelkerConfigCore {
    */
   hasKey(key: string): boolean {
     return key in this.data;
+  }
+
+  /**
+   * Get the schema (instance method for app access via $melker.config.schema)
+   */
+  getSchema(): Record<string, unknown> {
+    return (schema as ConfigSchema).properties as unknown as Record<string, unknown>;
+  }
+
+  /**
+   * Get all schema key names
+   */
+  getKeys(): string[] {
+    return Object.keys((schema as ConfigSchema).properties);
+  }
+
+  /**
+   * Save non-default values to ~/.config/melker/config.json.
+   * Skips keys with source 'cli' or 'env' (transient overrides).
+   * Returns the number of keys saved.
+   */
+  save(overrides?: Record<string, unknown>): number {
+    const s = schema as ConfigSchema;
+    const configDir = getConfigDir();
+    const configPath = `${configDir}/config.json`;
+
+    // Build flat map of values to save
+    const toSave: Record<string, unknown> = {};
+    for (const key of Object.keys(s.properties)) {
+      const source = this.sources[key];
+      // Skip transient overrides (env/cli) — only save file/policy/runtime/default-changed values
+      if (source === 'cli' || source === 'env') continue;
+      const value = this.data[key];
+      const defaultValue = s.properties[key]?.default;
+      // Only save if different from default
+      if (value !== defaultValue) {
+        toSave[key] = value;
+      }
+    }
+
+    // Apply explicit overrides (from config editor)
+    if (overrides) {
+      for (const [key, value] of Object.entries(overrides)) {
+        const defaultValue = s.properties[key]?.default;
+        if (value === defaultValue) {
+          delete toSave[key];
+        } else {
+          toSave[key] = value;
+        }
+      }
+    }
+
+    // Build nested JSON from dot-notation keys
+    const nested: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(toSave)) {
+      const parts = key.split('.');
+      let current: Record<string, unknown> = nested;
+      for (let i = 0; i < parts.length - 1; i++) {
+        if (!(parts[i] in current) || typeof current[parts[i]] !== 'object') {
+          current[parts[i]] = {};
+        }
+        current = current[parts[i]] as Record<string, unknown>;
+      }
+      current[parts[parts.length - 1]] = value;
+    }
+
+    // Ensure config directory exists
+    try {
+      statSync(configDir);
+    } catch {
+      mkdirSync(configDir, { recursive: true });
+    }
+
+    // Write formatted JSON
+    writeTextFileSync(configPath, JSON.stringify(nested, null, 2) + '\n');
+    getConfigLogger().info(`Config saved: ${Object.keys(toSave).length} keys to ${configPath}`);
+    return Object.keys(toSave).length;
   }
 
   /**

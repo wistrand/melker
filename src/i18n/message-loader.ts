@@ -1,3 +1,5 @@
+import { readTextFile, readDir, isNotFoundError } from '../runtime/mod.ts';
+
 /**
  * Message loading and flattening for the i18n subsystem.
  *
@@ -75,10 +77,10 @@ export function mergeMessages(base: FlatMessages, override: FlatMessages): FlatM
  */
 export async function loadMessageFile(path: string): Promise<FlatMessages | undefined> {
   try {
-    const content = await Deno.readTextFile(path);
+    const content = await readTextFile(path);
     return parseMessages(content);
   } catch (e) {
-    if (e instanceof Deno.errors.NotFound) {
+    if (isNotFoundError(e)) {
       return undefined;
     }
     throw e;
@@ -92,7 +94,7 @@ export async function loadMessageFile(path: string): Promise<FlatMessages | unde
 export async function discoverLocales(messagesDir: string): Promise<string[]> {
   const locales: string[] = [];
   try {
-    for await (const entry of Deno.readDir(messagesDir)) {
+    for await (const entry of readDir(messagesDir)) {
       if (entry.isFile && entry.name.endsWith('.json')) {
         locales.push(entry.name.slice(0, -5));
       }
@@ -116,7 +118,7 @@ export async function discoverLocalesWithLang(messagesDir: string): Promise<{ lo
   const locales: DiscoveredLocale[] = [];
   const catalogs: Map<string, FlatMessages> = new Map();
   try {
-    for await (const entry of Deno.readDir(messagesDir)) {
+    for await (const entry of readDir(messagesDir)) {
       if (entry.isFile && entry.name.endsWith('.json')) {
         const locale = entry.name.slice(0, -5);
         try {

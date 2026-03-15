@@ -269,7 +269,8 @@ function buildPermissionPaths(
         }
         continue;
       }
-      const resolved = p.startsWith('/') ? p : resolve(appDir, p);
+      const expanded = p.startsWith('~/') ? `${Env.get('HOME') || '/tmp'}${p.slice(1)}` : p;
+      const resolved = expanded.startsWith('/') ? expanded : resolve(appDir, expanded);
       if (!isPathDenied(resolved, denyPaths)) {
         paths.push(resolved);
       }

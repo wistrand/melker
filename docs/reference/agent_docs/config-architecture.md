@@ -211,6 +211,14 @@ config.getSource('theme')                   // ConfigSource | undefined
 // relative to CWD when source is 'env' or 'cli', relative to source
 // file when source is 'policy' or 'file')
 
+// Schema introspection
+config.getSchema()                          // Record<string, unknown> — all schema properties
+config.getKeys()                            // string[] — all schema key names
+
+// Persist config to file (requires write permission to ~/.config/melker in policy)
+config.save()                               // number — saves non-default values to config.json
+config.save({ 'theme': 'bw-std' })          // number — merge overrides before saving
+
 // Late initialization (when config auto-inits before flags are parsed)
 MelkerConfig.applyCliFlags(parsedArgs);
 MelkerConfig.applyPolicyConfig(policy.config);
@@ -427,6 +435,17 @@ const name = $melker.config.getString('myapp.name', 'default');
 if ($melker.config.hasKey('myapp.custom')) {
   const value = $melker.config.getValue('myapp.custom');
 }
+
+// Source tracking
+const source = $melker.config.getSource('theme');  // 'default' | 'file' | 'policy' | 'cli' | 'env'
+
+// Schema introspection (for building config UIs)
+const schema = $melker.config.getSchema();  // All schema properties
+const keys = $melker.config.getKeys();       // All key names
+
+// Save config to ~/.config/melker/config.json
+const count = $melker.config.save();                         // Save non-default values
+const count2 = $melker.config.save({ 'theme': 'bw-std' });  // Merge overrides before saving
 ```
 
 **Custom config keys** defined in `<policy>` are automatically available:

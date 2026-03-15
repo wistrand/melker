@@ -544,7 +544,7 @@ CSS-like properties in `style` attribute:
 - `$melker.toast.dismissAll()` - Dismiss all toasts
 - `$melker.toast.setPosition(position)` - Set toast position ('top' or 'bottom')
 - `$melker.setTitle(title)` - Set window/terminal title
-- `$melker.config` - Access configuration (schema + custom keys from policy)
+- `$melker.config` - Access configuration (schema + custom keys from policy). Includes `getValue()`, `getSource()`, `getSchema()`, `getKeys()`, `save()`
 - Exported script functions available as `$app.functionName()` (or `$melker.exports.functionName()`)
 
 ## State Persistence

@@ -130,7 +130,16 @@ $melker: {
     getBoolean(key: string, defaultValue: boolean): boolean;
     getNumber(key: string, defaultValue: number): number;
     getValue(key: string): unknown;
+    getSource(key: string): string | undefined;  // 'default' | 'file' | 'policy' | 'cli' | 'env' | 'runtime'
     hasKey(key: string): boolean;
+
+    // Schema introspection
+    getSchema(): Record<string, unknown>;  // All schema properties (type, default, env, flag, etc.)
+    getKeys(): string[];                   // All schema key names
+
+    // Persist config to file (~/.config/melker/config.json)
+    // Requires write permission to ~/.config/melker in policy
+    save(overrides?: Record<string, unknown>): number;  // Returns count of saved keys
   };
 
   // Internal

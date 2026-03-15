@@ -326,6 +326,21 @@ engine.hasPermission('ai')       // true if ai: true
 
 The `all: true` permission grants all runtime permissions.
 
+### Tilde (`~`) Expansion
+
+Permission paths starting with `~/` are expanded to the user's home directory (`$HOME`). This allows policies to reference user-specific directories:
+
+```json
+{
+  "permissions": {
+    "read": ["~/.config/melker"],
+    "write": ["~/.config/melker"]
+  }
+}
+```
+
+The path `~/.config/melker` expands to `/home/user/.config/melker` at runtime. Without tilde expansion, such paths would be resolved relative to the app directory.
+
 ### `cwd` Special Value
 
 The special value `"cwd"` in `read` or `write` arrays expands to the current working directory at runtime. This allows relative paths in the app to work as long as they resolve within the project directory:

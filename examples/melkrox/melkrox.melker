@@ -1024,7 +1024,7 @@ export async function handleInput() {
       htmlParts.push('hr{border:none;border-top:1px solid #333;margin:2em 0}');
       htmlParts.push('</style></head><body>');
       htmlParts.push('<h1>' + title + '</h1>');
-      let turnNum = 0;
+      let turnNum = -1;
       for (let i = 0; i < gameState.history.length; i++) {
         const entry = gameState.history[i];
         if (entry.role === 'assistant') {
@@ -1033,14 +1033,15 @@ export async function handleInput() {
           const narrative = parsed ? parsed.narrative : entry.content;
           const imgKey = currentGameId ? 'image:' + currentGameId + ':' + turnNum : 'image:' + turnNum;
           const cachedImg = await $melker.cache.read(CACHE_NS, imgKey);
-          htmlParts.push('<hr><h3>Turn ' + turnNum + '</h3>');
+          const label = turnNum === 0 ? 'Prologue' : 'Turn ' + turnNum;
+          htmlParts.push('<hr><h3>' + label + '</h3>');
           if (parsed?.location) htmlParts.push('<div class="location">' + parsed.location + '</div>');
           if (cachedImg) htmlParts.push('<img src="' + decoder.decode(cachedImg) + '">');
           htmlParts.push('<p>' + (narrative || '').replace(/\n/g, '</p><p>') + '</p>');
         } else if (entry.role === 'user') {
           const actionMatch = entry.content.match(/<ACTION>([\s\S]*?)<\/ACTION>/);
           const action = actionMatch ? actionMatch[1].trim() : entry.content;
-          if (turnNum > 0) htmlParts.push('<div class="action">' + action + '</div>');
+          if (turnNum >= 0) htmlParts.push('<div class="action">' + action + '</div>');
         }
       }
       // Append current turn if not already in history

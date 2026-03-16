@@ -18,15 +18,23 @@
       },
       "openrouter.model": {
         "type": "string",
-        "default": "google/gemini-2.5-flash"
+        "default": "google/gemini-2.5-flash",
+        "env": "MELKROX_MODEL"
       },
       "openrouter.imageModel": {
         "type": "string",
-        "default": "google/gemini-3.1-flash-image-preview"
+        "default": "google/gemini-3.1-flash-image-preview",
+        "env": "MELKROX_IMAGE_MODEL"
+      },
+      "openrouter.setupModel": {
+        "type": "string",
+        "default": "anthropic/claude-sonnet-4",
+        "env": "MELKROX_SETUP_MODEL"
       },
       "openrouter.visionModel": {
         "type": "string",
-        "default": "google/gemini-2.5-flash"
+        "default": "google/gemini-2.5-flash",
+        "env": "MELKROX_VISION_MODEL"
       },
       "openrouter.skipImages": {
         "type": "boolean",
@@ -736,9 +744,12 @@ export async function startGame() {
     $melker.render();
     log('log-area', 'Generating opening scene via ' + model + '...');
     const t1 = Date.now();
+    const initialFactsBlock = Object.keys(initialFacts).length > 0
+      ? '<STATE>\n<FACTS>\n' + Object.entries(initialFacts).map(([k, v]) => k + '=' + v).join('\n') + '\n</FACTS>\n</STATE>\n'
+      : '';
     const opening = await callOpenRouterStreaming(
-      config.systemPrompt + '\n\n' + TURN_RULES,
-      [{ role: 'user', content: 'Begin the adventure. Describe the opening scene.' }]
+      'CRITICAL: Respond with ONLY a raw JSON object. No markdown, no fences, no text before or after.\n\n' + config.systemPrompt + '\n\n' + TURN_RULES,
+      [{ role: 'user', content: initialFactsBlock + 'Begin the adventure. Describe the opening scene.' }]
     );
     log(logId, 'Opening scene received (' + ((Date.now() - t1) / 1000).toFixed(1) + 's)' + usageSuffix());
 
@@ -746,10 +757,14 @@ export async function startGame() {
     if (scene) {
       applyScene(scene);
       gameState.history.push(
+        { role: 'user', content: initialFactsBlock + 'Begin the adventure. Describe the opening scene.' },
+        { role: 'assistant', content: scene.narrative || opening, _raw: opening }
+      );
+    } else {
+      gameState.history.push(
         { role: 'user', content: 'Begin the adventure. Describe the opening scene.' },
         { role: 'assistant', content: opening }
       );
-    } else {
       gameState.currentScene = opening;
     }
 
@@ -758,12 +773,13 @@ export async function startGame() {
     $melker.render();
 
     // Generate opening image
-    await generateSceneImage(logId);
+    const imgResult = await generateSceneImage(logId);
 
     await saveState();
     log(logId, 'Game state saved. Starting adventure!');
 
     renderScene();
+    if (imgResult === 'failed') showImageRetryButton(logId);
     $melker.render();
     clearLog(logId);
     focusInput();
@@ -782,7 +798,7 @@ export async function handleInput() {
   const input = $melker.getElementById('cmd-input');
   const text = input.props.value;
   if (!text || !text.trim()) return;
-  input.props.value = '';
+  input.setValue('');
 
   const cmd = text.trim();
   const logId = 'log-area';
@@ -826,7 +842,7 @@ export async function handleInput() {
         ? gameState.history[gameState.history.length - 1]
         : null;
       if (lastAssistant && lastAssistant.role === 'assistant') {
-        const scene = parseJSON(lastAssistant.content);
+        const scene = parseJSON(lastAssistant._raw || lastAssistant.content);
         if (scene) {
           // Apply scene without stateUpdates (facts already rebuilt)
           if (scene.narrative) gameState.currentScene = scene.narrative;
@@ -858,6 +874,9 @@ export async function handleInput() {
       }
       await saveState();
       renderScene();
+      // Restore the player's original input from the undone turn
+      const actionMatch = user.content.match(/<ACTION>([\s\S]*?)<\/ACTION>/);
+      if (actionMatch) $melker.getElementById('cmd-input').setValue(actionMatch[1].trim());
       log(logId, 'Undid last turn. Now at turn ' + gameState.turnCount + (redoStack.length ? ' (/redo available)' : ''));
     } else {
       $melker.toast.show('Nothing to undo', { type: 'warning' });
@@ -871,7 +890,7 @@ export async function handleInput() {
       gameState.turnCount++;
       // Restore the facts snapshot from when this turn was active
       if (entry.facts) gameState.facts = entry.facts;
-      const scene = parseJSON(entry.assistant.content);
+      const scene = parseJSON(entry.assistant._raw || entry.assistant.content);
       if (scene) {
         // Apply scene without stateUpdates (facts already restored from snapshot)
         if (scene.narrative) gameState.currentScene = scene.narrative;
@@ -931,9 +950,10 @@ export async function handleInput() {
   if (cmd === '/reimage' || cmd.startsWith('/reimage ')) {
     clearLog(logId);
     const customStyle = cmd.slice(8).trim() || null;
-    await generateSceneImage(logId, customStyle);
+    const imgResult = await generateSceneImage(logId, customStyle);
     setSpinner('game-spinner', false);
     renderScene();
+    if (imgResult === 'failed') showImageRetryButton(logId, customStyle);
     $melker.render();
     return;
   }
@@ -998,8 +1018,7 @@ export async function handleInput() {
       if (entry.role === 'user') {
         lines.push('**> ' + entry.content + '**');
       } else {
-        const parsed = parseJSON(entry.content);
-        lines.push((parsed ? parsed.narrative : entry.content).slice(0, 100) + '...');
+        lines.push(entry.content.slice(0, 100) + '...');
       }
       lines.push('');
     }
@@ -1029,7 +1048,7 @@ export async function handleInput() {
         const entry = gameState.history[i];
         if (entry.role === 'assistant') {
           turnNum++;
-          const parsed = parseJSON(entry.content);
+          const parsed = parseJSON(entry._raw || entry.content);
           const narrative = parsed ? parsed.narrative : entry.content;
           const imgKey = currentGameId ? 'image:' + currentGameId + ':' + turnNum : 'image:' + turnNum;
           const cachedImg = await $melker.cache.read(CACHE_NS, imgKey);
@@ -1056,7 +1075,9 @@ export async function handleInput() {
         htmlParts.push('<p>' + gameState.currentScene.replace(/\n/g, '</p><p>') + '</p>');
       }
       htmlParts.push('</body></html>');
-      const storyPath = $melker.cacheDir + '/story.html';
+      let counter = 1;
+      let storyPath = $melker.cacheDir + '/story.html';
+      try { while (await Deno.stat(storyPath)) { counter++; storyPath = $melker.cacheDir + '/story-' + counter + '.html'; } } catch { /* doesn't exist, use it */ }
       await Deno.writeTextFile(storyPath, htmlParts.join('\n'));
       $melker.openBrowser(storyPath);
       log(logId, 'Story opened in browser (' + turnNum + ' turns)');
@@ -1092,9 +1113,84 @@ export async function handleInput() {
     return;
   }
 
-  // Unknown / commands — don't send to AI
+  if (cmd.startsWith('/restyle ')) {
+    const modification = cmd.slice(9).trim();
+    if (!modification) {
+      $melker.toast.show('Usage: /restyle <modification>', { type: 'warning' });
+      return;
+    }
+    const currentStyle = gameState.worldConfig?.imageStyle || '(none)';
+    const currentConstraints = gameState.worldConfig?.imageConstraints || '(default)';
+    log(logId, 'Restyling: "' + modification + '"...');
+    setSpinner('game-spinner', true, 'restyling');
+    try {
+      const result = await callOpenRouter(
+        'You are a creative image style director. Given the current image style and constraints, apply the requested modification boldly — reshape the entire aesthetic if the modification calls for it. Return ONLY a raw JSON object: {"style": "full new style description", "constraints": "full new constraints"}. Write rich, evocative style descriptions that capture mood, palette, lighting, texture, and artistic influences. Constraints should always include "Wide 3:1 format" unless the modification explicitly requests or implies a different aspect ratio.',
+        [{ role: 'user', content: 'Current style: ' + currentStyle + '\nCurrent constraints: ' + currentConstraints + '\nModification: ' + modification }]
+      );
+      const parsed = parseJSON(result);
+      if (parsed && parsed.style) {
+        if (!gameState.worldConfig) gameState.worldConfig = {};
+        gameState.worldConfig.imageStyle = parsed.style;
+        gameState.worldConfig.imageConstraints = parsed.constraints || parsed.style;
+        log(logId, 'Style: ' + parsed.style);
+        log(logId, 'Constraints: ' + (parsed.constraints || parsed.style));
+        // Auto-regenerate image with new style
+        const imgResult = await generateSceneImage(logId);
+        setSpinner('game-spinner', false);
+        renderScene();
+        if (imgResult === 'failed') showImageRetryButton(logId);
+        $melker.render();
+      } else {
+        log(logId, 'Failed to parse restyle response');
+        setSpinner('game-spinner', false);
+      }
+    } catch (e) {
+      log(logId, 'Restyle failed: ' + e.message);
+      setSpinner('game-spinner', false);
+    }
+    return;
+  }
+
+  if (cmd === '/style' || cmd.startsWith('/style ')) {
+    const arg = cmd.slice(6).trim();
+    if (!arg) {
+      const style = gameState.worldConfig?.imageStyle || '(none)';
+      const constraints = gameState.worldConfig?.imageConstraints || '(default)';
+      log(logId, 'Style: ' + style);
+      log(logId, 'Constraints: ' + constraints);
+    } else {
+      if (!gameState.worldConfig) gameState.worldConfig = {};
+      gameState.worldConfig.imageStyle = arg;
+      gameState.worldConfig.imageConstraints = arg;
+      log(logId, 'Image style/constraints set: ' + arg);
+    }
+    return;
+  }
+
+  // Unknown / commands — ask LLM for correction
   if (cmd.startsWith('/')) {
-    $melker.toast.show('Unknown command: ' + cmd, { type: 'warning' });
+    const knownCmds = '/new /games /undo /redo /state /story /image /reimage /images /gfx /dither /history /help /style /restyle /cost';
+    setSpinner('game-spinner', true, 'checking command');
+    try {
+      const correction = await callOpenRouter(
+        'Given a mistyped slash command, find the closest match from the valid list. Return ONLY: {"match":"/command args"} or {"match":null}. Keep any arguments.',
+        [{ role: 'user', content: cmd + '\nValid: ' + knownCmds }]
+      );
+      const parsed = parseJSON(correction);
+      if (parsed && parsed.match) {
+        $melker.getElementById('cmd-input').setValue(parsed.match);
+        $melker.toast.show('Did you mean: ' + parsed.match);
+        logger.info('Command corrected: ' + cmd + ' -> ' + parsed.match);
+      } else {
+        $melker.toast.show('Unknown command: ' + cmd, { type: 'warning' });
+      }
+    } catch (e) {
+      logger.warn('Command correction failed: ' + e.message);
+      $melker.toast.show('Unknown command: ' + cmd, { type: 'warning' });
+    }
+    setSpinner('game-spinner', false);
+    $melker.render();
     return;
   }
 
@@ -1151,28 +1247,39 @@ export async function handleInput() {
     const t0 = Date.now();
 
     const response = await callOpenRouterStreaming(
-      gameState.worldConfig.systemPrompt + '\n\n' + TURN_RULES,
+      'CRITICAL: Respond with ONLY a raw JSON object. No markdown, no fences, no text before or after.\n\n' + gameState.worldConfig.systemPrompt + '\n\n' + TURN_RULES,
       gameState.history
     );
 
     const elapsed = ((Date.now() - t0) / 1000).toFixed(1);
     log(logId, 'Response received (' + elapsed + 's)' + usageSuffix());
 
-    gameState.history.push({ role: 'assistant', content: response });
+    if (!response || !response.trim()) {
+      // Empty response — remove the user message and show retry
+      gameState.history.pop();
+      log(logId, 'Empty response from LLM');
+      showRetryButton(logId, cmd);
+      return;
+    }
+
     gameState.turnCount++;
     logger.info('Turn response: ' + response);
 
     const scene = parseJSON(response);
     if (scene) {
+      // Store narrative-only in history (LLM context), raw JSON in _raw (for undo/facts)
+      gameState.history.push({ role: 'assistant', content: scene.narrative || response, _raw: response });
       applyScene(scene);
       renderScene();
       $melker.render();
       log(logId, 'Location: ' + (scene.location || gameState.location));
     } else {
-      gameState.currentScene = response;
-      renderScene();
-      $melker.render();
-      log(logId, 'Raw text response (no structured JSON)');
+      // Non-JSON response — treat as failed, let player retry
+      gameState.history.pop();
+      log(logId, 'Invalid response (not JSON) — retry');
+      logger.warn('Non-JSON turn response: ' + response.slice(0, 200));
+      showRetryButton(logId, cmd);
+      return;
     }
 
     // Save state immediately so fast-clicking doesn't lose turns
@@ -1186,18 +1293,20 @@ export async function handleInput() {
     await new Promise(r => setTimeout(r, 2000));
     if (turnBusy) return; // player already started next turn
     // Generate scene image in background (abortable by next turn)
-    await generateSceneImage(logId);
+    const imgResult = await generateSceneImage(logId);
 
     if (gameState) {
       await saveState(); // re-save with cached image key
       log(logId, 'Turn ' + gameState.turnCount + ' complete.');
       renderScene();
+      if (imgResult === 'failed') showImageRetryButton(logId);
     }
   } catch (e) {
     if (gameState) {
       gameState.currentScene += '\n\n*Error: ' + e.message + '*';
       gameState.history.pop();
       renderScene();
+      showRetryButton(logId, cmd);
     }
     log(logId, 'ERROR: ' + e.message);
   }
@@ -1234,14 +1343,23 @@ function rebuildFacts(state) {
       }
     }
   }
-  // Replay stateUpdates from all assistant messages
+  // Replay fact updates from all assistant messages
   for (const entry of (state.history || [])) {
     if (entry.role !== 'assistant') continue;
-    const scene = parseJSON(entry.content);
-    if (!scene?.stateUpdates) continue;
-    for (const su of scene.stateUpdates) {
-      if (su.delete) delete facts[String(su.delete).toLowerCase()];
-      else if (su.set && su.value !== undefined) facts[String(su.set).toLowerCase()] = String(su.value);
+    const scene = parseJSON(entry._raw || entry.content);
+    if (!scene) continue;
+    if (scene.setFacts && typeof scene.setFacts === 'object') {
+      for (const [k, v] of Object.entries(scene.setFacts)) facts[String(k).toLowerCase()] = String(v);
+    }
+    if (scene.deleteFacts && Array.isArray(scene.deleteFacts)) {
+      for (const k of scene.deleteFacts) delete facts[String(k).toLowerCase()];
+    }
+    // Legacy stateUpdates
+    if (scene.stateUpdates && Array.isArray(scene.stateUpdates)) {
+      for (const su of scene.stateUpdates) {
+        if (su.delete) delete facts[String(su.delete).toLowerCase()];
+        else if (su.set && su.value !== undefined) facts[String(su.set).toLowerCase()] = String(su.value);
+      }
     }
   }
   return facts;
@@ -1252,8 +1370,10 @@ function applyScene(scene) {
   if (scene.location) gameState.location = scene.location;
   if (scene.inventory) gameState.inventory = scene.inventory;
   if (scene.choices) gameState.choices = scene.choices.map(c => typeof c === 'string' ? c : (c.label || c.text || String(c)));
-  // LLM-generated image prompt for this scene
+  // LLM-generated image prompt and characters for this scene
   gameState.sceneImagePrompt = scene.imagePrompt || null;
+  gameState.charactersInScene = Array.isArray(scene.charactersInScene)
+    ? scene.charactersInScene.map(n => String(n).toLowerCase()) : [];
   // Per-scene image style override (cleared each turn, only set if model provides one)
   gameState._lastSceneImageStyle = scene.imageStyle || null;
   if (scene.imageStyle) logger.info('Scene image style override: ' + scene.imageStyle);
@@ -1261,32 +1381,39 @@ function applyScene(scene) {
   gameState.mood = scene.mood || null;
   setMoodShader(gameState.mood);
   logger.debug('Scene applied | location=' + gameState.location + ' inventory=[' + gameState.inventory.join(', ') + '] choices=' + (gameState.choices?.length || 0) + ' narrative=' + (gameState.currentScene?.length || 0) + ' chars');
-  // Apply state updates (facts) — all keys normalized to lowercase
-  if (scene.stateUpdates && Array.isArray(scene.stateUpdates)) {
-    if (!gameState.facts) gameState.facts = {};
-    for (const su of scene.stateUpdates) {
-      if (su.delete) {
-        const key = String(su.delete).toLowerCase();
-        delete gameState.facts[key];
-        logger.debug('Fact deleted: ' + key);
-      } else if (su.set && su.value !== undefined) {
-        const key = String(su.set).toLowerCase();
-        gameState.facts[key] = String(su.value);
-        logger.debug('Fact set: ' + key + ' = ' + su.value);
-        // Log notable fact changes to the player
-        if (key.startsWith('thread:')) {
-          log('log-area', 'Thread [' + key.slice(7) + '] ' + su.value, true);
-        } else if (key.startsWith('appearance:')) {
-          log('log-area', key.slice(11) + ' appearance changed', true);
-        }
+  // Apply fact updates — all keys normalized to lowercase
+  if (!gameState.facts) gameState.facts = {};
+  if (scene.setFacts && typeof scene.setFacts === 'object') {
+    for (const [k, v] of Object.entries(scene.setFacts)) {
+      const key = String(k).toLowerCase();
+      gameState.facts[key] = String(v);
+      logger.debug('Fact set: ' + key + ' = ' + v);
+      if (key.startsWith('thread:')) {
+        log('log-area', 'Thread [' + key.slice(7) + '] ' + v, true);
+      } else if (key.startsWith('appearance:')) {
+        log('log-area', key.slice(11) + ' appearance changed', true);
       }
     }
-    logger.info('State updates applied: ' + JSON.stringify(scene.stateUpdates));
-    // Warn if facts are getting large
-    const factCount = Object.keys(gameState.facts).length;
-    if (factCount > 80) {
-      logger.warn('Facts store has ' + factCount + ' entries — consider pruning');
+    logger.info('setFacts: ' + JSON.stringify(scene.setFacts));
+  }
+  if (scene.deleteFacts && Array.isArray(scene.deleteFacts)) {
+    for (const k of scene.deleteFacts) {
+      const key = String(k).toLowerCase();
+      delete gameState.facts[key];
+      logger.debug('Fact deleted: ' + key);
     }
+    logger.info('deleteFacts: ' + JSON.stringify(scene.deleteFacts));
+  }
+  // Legacy stateUpdates support (for saved games)
+  if (scene.stateUpdates && Array.isArray(scene.stateUpdates)) {
+    for (const su of scene.stateUpdates) {
+      if (su.delete) delete gameState.facts[String(su.delete).toLowerCase()];
+      else if (su.set && su.value !== undefined) gameState.facts[String(su.set).toLowerCase()] = String(su.value);
+    }
+  }
+  const factCount = Object.keys(gameState.facts).length;
+  if (factCount > 80) {
+    logger.warn('Facts store has ' + factCount + ' entries — consider pruning');
   }
 }
 
@@ -1567,9 +1694,20 @@ async function generateSceneImage(logId, customStyle) {
       ? customStyle
       : (gameState.worldConfig?.imageConstraints || defaultConstraints);
     // Custom style is a full override — don't append world imageStyle
+    // Avoid duplicating when constraints and style are identical (e.g. from /style command)
     const styleBlock = customStyle
       ? constraints + '\n'
-      : constraints + '\n' + (activeStyle ? activeStyle + '\n' : '');
+      : constraints + '\n' + (activeStyle && activeStyle !== constraints ? activeStyle + '\n' : '');
+
+    // Build <CHARACTERS> from appearance facts filtered to characters in this scene
+    const charNames = gameState.charactersInScene || [];
+    const appearances = charNames
+      .map(name => {
+        const desc = (gameState.facts || {})['appearance:' + name];
+        return desc ? name + ': ' + desc : null;
+      })
+      .filter(Boolean)
+      .join('\n');
 
     // Use LLM-generated image prompt if available, fall back to scene narrative
     const sceneDesc = gameState.sceneImagePrompt || gameState.currentScene || '';
@@ -1577,6 +1715,7 @@ async function generateSceneImage(logId, customStyle) {
       + '<STYLE>\n'
       + styleBlock
       + '</STYLE>\n'
+      + (appearances ? '<CHARACTERS>\n' + appearances + '\n</CHARACTERS>\n' : '')
       + '<SCENE>' + sceneDesc + '</SCENE>';
 
     logger.info('Image prompt: ' + imagePrompt);
@@ -1607,12 +1746,19 @@ async function generateSceneImage(logId, customStyle) {
       const imgKey = currentGameId ? 'image:' + currentGameId + ':' + gameState.turnCount : 'image:' + gameState.turnCount;
       await $melker.cache.write(CACHE_NS, imgKey, encoder.encode(imageData));
       await pruneImageCache();
+    } else if (gameState) {
+      log(logId, 'Empty image response');
+      return 'failed';
     }
   } catch (e) {
     setImageLoading(false);
 
-    log(logId, 'Image generation skipped: ' + e.message);
-    // Non-fatal - game continues without image
+    if (e.name === 'AbortError') {
+      log(logId, 'Image generation aborted');
+    } else {
+      log(logId, 'Image failed (' + imageModel + '): ' + e.message);
+    }
+    return 'failed';
   }
 }
 
@@ -1633,7 +1779,7 @@ async function callImageGeneration(prompt, signal) {
       messages: [
         { role: 'user', content: 'Generate an image. Do not respond with text. Only output an image.\n\n' + prompt }
       ],
-      modalities: ['image', 'text'],
+      modalities: ['image'],
       max_tokens: 1024
     }),
     signal: signal
@@ -1645,7 +1791,15 @@ async function callImageGeneration(prompt, signal) {
   if (!res.ok) {
     const text = await res.text();
     logger.error('Image API error ' + res.status + ': ' + text.slice(0, 300));
-    throw new Error('Image API ' + res.status + ': ' + text.slice(0, 100));
+    // Extract a clean error message from the nested JSON
+    let msg = res.status + '';
+    try {
+      const err = JSON.parse(text);
+      const raw = err?.error?.metadata?.raw;
+      if (raw) { try { msg = JSON.parse(raw)?.error?.message || msg; } catch (_) {} }
+      else { msg = err?.error?.message || msg; }
+    } catch (_) { msg = text.slice(0, 80); }
+    throw new Error(msg);
   }
 
   const json = await res.json();
@@ -1683,25 +1837,34 @@ async function pruneImageCache() {
 // The setup model only generates creative/world content (narratorPrompt).
 const TURN_RULES = `
 <RESPONSE_FORMAT>
-Always respond with ONLY a JSON object (no markdown fences) in this exact format:
+Required fields:
 {
-  "narrative": "What HAPPENS — action, dialogue, events. 2-4 sentences.",
   "location": "current location name",
   "inventory": ["item1", "item2"],
   "choices": ["short action 1", "short action 2", "short action 3"],
-  "imagePrompt": "What the scene image should show — focus on action, composition, environment, and mood. 1-3 sentences.",
-  "imageStyle": "optional override",
-  "mood": "optional atmosphere effect(s) — string or [string, string] (max 2)",
-  "stateUpdates": [{"set": "key", "value": "value"}, {"delete": "key"}]
+  "narrative": "What happens. 2-4 sentences.",
+  "charactersInScene": ["lowercase-name1", "lowercase-name2"],
+  "imagePrompt": "Visual description of this scene. 1-3 sentences.",
+  "setFacts": {"key": "value"}
 }
-Keep narratives SHORT (2-4 sentences). Focus on what happens — action, dialogue, discovery, consequences. Describe a character's appearance when they first appear, but do not repeat it in subsequent scenes. Choice labels under 6 words. Small terminal window — brevity is essential.
-imagePrompt is REQUIRED — describe what the scene image should show. Lead with ACTION, COMPOSITION, and ENVIRONMENT — what's happening, where, the mood. For each character in the scene, include a brief visual tag (e.g. "copper-haired woman in a denim jacket") but do NOT dump their full appearance description. Keep it cinematic: think camera angle, framing, atmosphere. 1-3 sentences. Example: "A copper-haired woman in a denim jacket crouches behind a shipping crate on a rain-soaked dock, peering at two guards by the warehouse door. Harsh sodium lights cast long shadows across wet concrete."
-imageStyle is OPTIONAL — only include if this scene's mood deviates significantly from the game's default visual style (e.g. a sudden dream sequence, a flashback, a tonal shift). Omit for normal scenes.
-mood is OPTIONAL — triggers animated atmosphere effect(s) on the scene image. Use sparingly for dramatic moments. Can be a single string or an array of up to 2 effects that layer together (e.g. ["rain", "darkness"] for dark rainstorm, ["fog", "magic"] for enchanted mist). Available: "lightning" (storm bolts), "rain" (falling streaks), "bloom" (warm glow), "sunrays" (golden beams), "glitch" (digital distortion), "fog" (drifting mist), "fire" (flickering from below), "underwater" (blue-green caustics), "snow" (drifting flakes, cold tint), "darkness" (heavy vignette, low visibility), "sandstorm" (horizontal orange haze), "magic" (shimmering sparkles, color shifts), "heat" (rising shimmer distortion). Omit or null for no effect. Each turn replaces the previous.
+
+Optional fields (omit when not needed):
+  "mood": "effect" or ["effect1", "effect2"]
+  "imageStyle": "override for this scene only"
+  "deleteFacts": ["key-to-remove"]
 </RESPONSE_FORMAT>
 
+<FIELD_RULES>
+narrative: SHORT (2-4 sentences). Focus on action, dialogue, discovery, consequences. Describe a character's appearance briefly when they FIRST appear, then never again unless it changes. Choice labels under 6 words. Brevity is essential.
+charactersInScene: REQUIRED — lowercase names of characters physically present (matching appearance: fact keys). Include the protagonist. Empty array if none.
+imagePrompt: REQUIRED — a visual description of THIS scene's narrative. What a camera would see: action, environment, lighting, atmosphere. Must match the narrative — do not invent content not in the scene. Refer to characters by name so they match the <CHARACTERS> block injected from facts (e.g. "Elena crouches behind a crate" not "a woman crouches"). Do NOT repeat their full appearance — just use their name. 1-3 sentences.
+imageStyle: OPTIONAL — only when this scene's mood deviates significantly from the default style (dream sequence, flashback, tonal shift). Omit for normal scenes.
+mood: OPTIONAL — animated atmosphere effect on the scene image. Use sparingly. String or array of up to 2. Available: "lightning", "rain", "bloom", "sunrays", "glitch", "fog", "fire", "underwater", "snow", "darkness", "sandstorm", "magic", "heat". Omit or null for no effect. Each turn replaces the previous.
+</FIELD_RULES>
+
 <STATE_TRACKING>
-stateUpdates is REQUIRED — use it to track ALL persistent world state changes. The client stores these as key/value facts and sends them back each turn in a FACTS block. This is your long-term memory — anything not in stateUpdates will be forgotten when conversation history is pruned.
+setFacts is REQUIRED — a key/value object tracking ALL persistent world state changes. The client stores these and sends them back each turn in a FACTS block. This is your long-term memory — anything not in setFacts will be forgotten when conversation history is pruned.
+deleteFacts is OPTIONAL — an array of fact keys to remove.
 Key naming conventions:
 - thread:name — story thread status (e.g. "thread:crystal mystery" = "first shard found, tension rising")
 - appearance:name — character appearance (e.g. "appearance:elena" = "tall, dark-haired, wearing stolen guard uniform"). Use lowercase names matching the character's actual name — for the protagonist, use their name (e.g. "appearance:marcus"), NEVER "appearance:you". Use full merged descriptions, not deltas. Update whenever a character's looks change (outfit, disguise, transformation, injury) — always write the COMPLETE current appearance including physical identity AND current clothing.
@@ -1727,7 +1890,7 @@ bridge_destroyed=true
 </STATE>
 <ACTION>player's action text</ACTION>
 
-Use the STATE tags to maintain consistency. The FACTS block is your long-term memory — use it to stay consistent even when old conversation history has been pruned. Update facts via stateUpdates in the response.
+Use the STATE tags to maintain consistency. The FACTS block is your long-term memory — use it to stay consistent even when old conversation history has been pruned. Update facts via setFacts/deleteFacts in the response.
 </INPUT_FORMAT>
 
 <CHARACTER_CONTINUITY>
@@ -1745,7 +1908,9 @@ Rules for keeping turns interesting:
 - COMPLICATIONS arrive naturally every 2-3 turns: interruptions, discoveries, betrayals, environmental changes, consequences of earlier actions, NPC confrontations.
 - TIME PASSES. If the player's action is minor ("look around"), advance the clock — an NPC arrives, weather shifts, a sound is heard, something changes in the environment. The world is alive.
 - SCENE CHANGES are good. Move the story to new locations when it serves the narrative. Don't let 3+ turns happen in one place unless dramatic events justify it.
-</PACING>`;
+</PACING>
+
+CRITICAL: Respond with ONLY a raw JSON object. No markdown, no fences, no text before or after.`;
 
 
 const SETUP_SYSTEM_PROMPT = `You are a text adventure game designer known for worlds that feel lived-in and surprising. Given the player's story prompt, generate a world configuration as JSON.
@@ -1937,9 +2102,14 @@ function parseJSON(text) {
     if (cleaned.startsWith('```')) {
       cleaned = cleaned.replace(/^```\w*\n?/, '').replace(/\n?```$/, '');
     }
-    return JSON.parse(cleaned);
-  } catch (_) {
-    // Fallback: extract fields from partial/broken JSON
+    const parsed = JSON.parse(cleaned);
+    const fields = Object.keys(parsed);
+    const sf = parsed.setFacts ? Object.keys(parsed.setFacts).length : 0;
+    const df = parsed.deleteFacts?.length || 0;
+    logger.info('JSON.parse OK | fields: ' + fields.join(', ') + ' | setFacts: ' + sf + ', deleteFacts: ' + df);
+    return parsed;
+  } catch (e) {
+    logger.warn('JSON.parse failed: ' + e.message + ' | length=' + text.length + ' | fallback to partial extraction: ' + text);
     return extractPartialJSON(text);
   }
 }
@@ -1973,7 +2143,66 @@ function extractPartialJSON(text) {
     if (items.length > 0) result.choices = items;
   }
 
-  logger.debug('Extracted partial JSON | narrative=' + narrative.length + ' chars, location=' + (location || 'none'));
+  // Extract setFacts object: {"key": "value", ...}
+  const sfIdx = text.indexOf('"setFacts"');
+  if (sfIdx !== -1) {
+    const braceStart = text.indexOf('{', sfIdx + 10);
+    if (braceStart !== -1) {
+      // Find matching closing brace
+      let depth = 0;
+      let braceEnd = -1;
+      for (let i = braceStart; i < text.length; i++) {
+        if (text[i] === '{') depth++;
+        else if (text[i] === '}') { depth--; if (depth === 0) { braceEnd = i; break; } }
+      }
+      if (braceEnd !== -1) {
+        try {
+          result.setFacts = JSON.parse(text.slice(braceStart, braceEnd + 1));
+          logger.info('Partial JSON recovered setFacts: ' + JSON.stringify(result.setFacts));
+        } catch (_) { /* skip malformed */ }
+      }
+    }
+  }
+
+  // Extract deleteFacts array: ["key", ...]
+  const dfMatch = text.match(/"deleteFacts"\s*:\s*\[([^\]]*)\]/);
+  if (dfMatch) {
+    const items = [];
+    const re = /"([^"]+)"/g;
+    let m;
+    while ((m = re.exec(dfMatch[1])) !== null) items.push(m[1]);
+    if (items.length > 0) {
+      result.deleteFacts = items;
+      logger.info('Partial JSON recovered deleteFacts: ' + JSON.stringify(items));
+    }
+  }
+
+  // Extract charactersInScene array
+  const cisMatch = text.match(/"charactersInScene"\s*:\s*\[([^\]]*)\]/);
+  if (cisMatch) {
+    const items = [];
+    const re2 = /"([^"]+)"/g;
+    let m2;
+    while ((m2 = re2.exec(cisMatch[1])) !== null) items.push(m2[1]);
+    if (items.length > 0) result.charactersInScene = items;
+  }
+
+  // Extract imagePrompt
+  const imgPrompt = extractJsonString(text, 'imagePrompt');
+  if (imgPrompt) result.imagePrompt = imgPrompt;
+
+  // Extract imageStyle
+  const imgStyle = extractJsonString(text, 'imageStyle');
+  if (imgStyle) result.imageStyle = imgStyle;
+
+  // Extract mood
+  const moodStr = extractJsonString(text, 'mood');
+  if (moodStr) result.mood = moodStr;
+
+  const extracted = Object.keys(result).join(', ');
+  const sf = result.setFacts ? Object.keys(result.setFacts).length : 0;
+  const df = result.deleteFacts?.length || 0;
+  logger.info('Partial JSON extracted | fields: ' + extracted + ' | narrative=' + narrative.length + ' chars, setFacts=' + sf + ', deleteFacts=' + df);
   return result;
 }
 
@@ -2098,13 +2327,55 @@ function renderScene() {
         variant: 'plain',
         class: 'choice-btn',
         onClick: () => {
-          $melker.getElementById('cmd-input').props.value = choice;
+          $melker.getElementById('cmd-input').setValue(choice);
           $app.handleInput();
         }
       });
       choicesBar.children.push(btn);
     }
   }
+}
+
+function showImageRetryButton(logId, customStyle) {
+  setImageLoading(false);
+  const choicesBar = $melker.getElementById('choices-bar');
+  const retryBtn = $melker.createElement('button', {
+    label: 'Retry image',
+    variant: 'plain',
+    class: 'choice-btn',
+    onClick: async () => {
+      // Remove just the retry button, keep choice buttons
+      const idx = choicesBar.children.indexOf(retryBtn);
+      if (idx !== -1) choicesBar.children.splice(idx, 1);
+      $melker.render();
+      const result = await generateSceneImage(logId, customStyle);
+      renderScene();
+      if (result === 'failed') showImageRetryButton(logId, customStyle);
+      $melker.render();
+    }
+  });
+  // Append rather than replace — turn choices may already be showing
+  choicesBar.children.push(retryBtn);
+  $melker.render();
+}
+
+function showRetryButton(logId, lastCmd) {
+  turnBusy = false;
+  setSpinner('game-spinner', false);
+  setImageLoading(false);
+  const choicesBar = $melker.getElementById('choices-bar');
+  const retryBtn = $melker.createElement('button', {
+    label: 'Retry',
+    variant: 'plain',
+    class: 'choice-btn',
+    onClick: () => {
+      $melker.getElementById('cmd-input').setValue(lastCmd);
+      $app.handleInput();
+    }
+  });
+  choicesBar.children = [retryBtn];
+  $melker.render();
+  focusInput();
 }
 
 // --- AI Assistant Tools ---
@@ -2155,9 +2426,9 @@ $melker.engine.onMount(async () => {
   const logId = 'loading-log';
 
   apiKey = $melker.config.getString('openrouter.key', '');
-  model = $melker.config.getString('openrouter.model', 'anthropic/claude-haiku-4-5');
-  setupModel = 'anthropic/claude-sonnet-4';
-  imageModel = $melker.config.getString('openrouter.imageModel', 'openai/gpt-image-1');
+  model = $melker.config.getString('openrouter.model', 'google/gemini-2.5-flash');
+  setupModel = $melker.config.getString('openrouter.setupModel', 'anthropic/claude-sonnet-4');
+  imageModel = $melker.config.getString('openrouter.imageModel', 'google/gemini-3.1-flash-image-preview');
   visionModel = $melker.config.getString('openrouter.visionModel', 'google/gemini-2.5-flash');
   skipImages = $melker.config.getString('openrouter.skipImages', 'false') === 'true';
 

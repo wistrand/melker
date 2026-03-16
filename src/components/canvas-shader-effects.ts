@@ -202,12 +202,14 @@ export function sunrays(opts: SunraysOptions = {}): ShaderCallback {
     if (!pixel) return [0, 0, 0];
     const nx = x / resolution.width;
     const ny = y / resolution.height;
-    // Radial angle from upper-right source
-    const angle = Math.atan2(ny + 0.1, nx - 1.1);
-    // Many thin ray bands rotating slowly
-    const ray = Math.pow(Math.max(0, Math.sin(angle * 12 + time * speed)), 4);
-    // Brighter toward upper-right
-    const falloff = Math.max(0, 1.2 - nx * 0.4 - ny * 0.6);
+    // Radial angle from upper-left source (slightly randomized)
+    const angle = Math.atan2(ny + 0.1, nx - 0.3);
+    // Subtle shimmer on ray edges
+    const shimmer = simplex3d(angle * 6, ny * 2, time * 0.8) * 0.15;
+    // Thin ray bands rotating slowly with shimmering edges
+    const ray = Math.pow(Math.max(0, Math.sin(angle * 12 + time * speed + shimmer)), 4);
+    // Brighter toward upper-left
+    const falloff = Math.max(0, 1.2 - (1 - nx) * 0.4 - ny * 0.6);
     const i = ray * falloff * intensityMax;
     // Pure additive warm light — visible even on dark images
     return [

@@ -145,11 +145,27 @@ export class InputElement extends Element implements Renderable, Focusable, Inte
       };
     }
 
+    // Calculate scroll offset to keep cursor visible
+    const actualCursorPos = Math.min(cursorPos, (maskedValue || '').length);
+    let scrollOffset = 0;
+    if ((maskedValue || '').length > maxDisplayWidth) {
+      // Scroll so cursor is always visible, with some context
+      if (actualCursorPos < maxDisplayWidth) {
+        scrollOffset = 0;
+      } else if (actualCursorPos >= (maskedValue || '').length) {
+        scrollOffset = (maskedValue || '').length - maxDisplayWidth;
+      } else {
+        scrollOffset = actualCursorPos - maxDisplayWidth + 1;
+      }
+    }
+
     if (textToRender) {
-      // Truncate text if it's longer than available width
-      let visibleText = textToRender;
-      if (textToRender.length > maxDisplayWidth) {
-        visibleText = textToRender.substring(textToRender.length - maxDisplayWidth);
+      let visibleText: string;
+      if (!value && placeholder) {
+        // Placeholder: no scroll
+        visibleText = textToRender.substring(0, maxDisplayWidth);
+      } else {
+        visibleText = textToRender.substring(scrollOffset, scrollOffset + maxDisplayWidth);
       }
       buffer.currentBuffer.setText(cb.x, cb.y, visibleText, textStyle);
     }
@@ -159,34 +175,28 @@ export class InputElement extends Element implements Renderable, Focusable, Inte
     if (isFocused && this._showingCompletions && this._selectedCompletionIndex >= 0) {
       const completion = this._completions[this._selectedCompletionIndex];
       if (completion && completion.length > value.length) {
-        // Show the rest of the completion in a muted style
         const previewText = completion.substring(value.length);
-        const scrollOffset = value.length > cb.width ? value.length - cb.width : 0;
         const visibleValueLen = value.length - scrollOffset;
         const previewStartX = cb.x + visibleValueLen;
         const availableWidth = cb.width - visibleValueLen;
 
-        if (previewStartX < cb.x + cb.width && availableWidth > 0) {
+        if (previewStartX >= cb.x && previewStartX < cb.x + cb.width && availableWidth > 0) {
           const truncatedPreview = previewText.substring(0, availableWidth);
 
-          // First, clear the entire preview area to remove any leftover characters
           for (let i = 0; i < availableWidth; i++) {
             buffer.currentBuffer.setText(previewStartX + i, cb.y, ' ', inputCellStyle);
           }
 
-          // Then render the new preview text
           buffer.currentBuffer.setText(previewStartX, cb.y, truncatedPreview, {
             ...textStyle,
             foreground: COLORS.gray,
-            // Make it visibly different from regular text
             underline: true
           });
         }
       } else {
-        // If no valid preview (e.g., completion is same length or shorter than current value),
-        // clear the preview area to remove any leftover characters
-        const clearStartX = cb.x + value.length;
-        const clearWidth = cb.width - value.length;
+        const visibleValueLen = Math.min(value.length - scrollOffset, cb.width);
+        const clearStartX = cb.x + visibleValueLen;
+        const clearWidth = cb.width - visibleValueLen;
         if (clearWidth > 0) {
           for (let i = 0; i < clearWidth; i++) {
             buffer.currentBuffer.setText(clearStartX + i, cb.y, ' ', inputCellStyle);
@@ -197,32 +207,19 @@ export class InputElement extends Element implements Renderable, Focusable, Inte
 
     // Show cursor only when focused
     if (isFocused) {
-      // Calculate cursor position based on the actual value length, not placeholder
-      const valueLength = value.length;
-      const actualCursorPos = Math.min(cursorPos, valueLength);
-      const cursorX = cb.x + actualCursorPos;
+      const cursorX = cb.x + actualCursorPos - scrollOffset;
 
       if (cursorX >= cb.x && cursorX < cb.x + cb.width) {
-        // Use reverse video for cursor - works universally across all terminals and themes
         const hasCharAtCursor = actualCursorPos < value.length;
+        const cursorChar = hasCharAtCursor
+          ? (isPassword ? '*' : value[actualCursorPos])
+          : ' ';
 
-        if (hasCharAtCursor) {
-          // Show the character with reverse video (swaps fg/bg)
-          // For password format, show * instead of the actual character
-          const cursorChar = isPassword ? '*' : value[actualCursorPos];
-          buffer.currentBuffer.setText(cursorX, cb.y, cursorChar, {
-            foreground: inputCellStyle.foreground,
-            background: inputCellStyle.background,
-            reverse: true,
-          });
-        } else {
-          // At empty position: use space with reverse video to show cursor block
-          buffer.currentBuffer.setText(cursorX, cb.y, ' ', {
-            foreground: inputCellStyle.foreground,
-            background: inputCellStyle.background,
-            reverse: true,
-          });
-        }
+        buffer.currentBuffer.setText(cursorX, cb.y, cursorChar, {
+          foreground: inputCellStyle.foreground,
+          background: inputCellStyle.background,
+          reverse: true,
+        });
       }
     }
 
@@ -485,9 +482,19 @@ export class InputElement extends Element implements Renderable, Focusable, Inte
     const value = this._internalValue;
     const contentX = relativeX - this._borderInset.left;
     const contentWidth = this._lastContentWidth;
+    const cursor = this._cursorPosition;
 
     // Calculate scroll offset (same logic as render)
-    const scrollOffset = value.length > contentWidth ? value.length - contentWidth : 0;
+    let scrollOffset = 0;
+    if (value.length > contentWidth) {
+      if (cursor < contentWidth) {
+        scrollOffset = 0;
+      } else if (cursor >= value.length) {
+        scrollOffset = value.length - contentWidth;
+      } else {
+        scrollOffset = cursor - contentWidth + 1;
+      }
+    }
     const newCursor = Math.min(value.length, Math.max(0, scrollOffset + contentX));
 
     if (newCursor !== this._cursorPosition) {
@@ -679,20 +686,32 @@ export class InputElement extends Element implements Renderable, Focusable, Inte
       ? { foreground: COLORS.gray, background: bg }
       : { foreground: fg, background: bg };
 
+    // Calculate scroll offset to keep cursor visible
+    const actualCursorPos = Math.min(cursorPos, (maskedValue || '').length);
+    let scrollOffset = 0;
+    if ((maskedValue || '').length > cb.width) {
+      if (actualCursorPos < cb.width) {
+        scrollOffset = 0;
+      } else if (actualCursorPos >= (maskedValue || '').length) {
+        scrollOffset = (maskedValue || '').length - cb.width;
+      } else {
+        scrollOffset = actualCursorPos - cb.width + 1;
+      }
+    }
+
     if (textToRender) {
-      // Truncate if longer than available width
-      let visibleText = textToRender;
-      if (textToRender.length > cb.width) {
-        visibleText = textToRender.substring(textToRender.length - cb.width);
+      let visibleText: string;
+      if (!value && placeholder) {
+        visibleText = textToRender.substring(0, cb.width);
+      } else {
+        visibleText = textToRender.substring(scrollOffset, scrollOffset + cb.width);
       }
       collector.setText(cb.x, cb.y, visibleText, textStyle);
     }
 
     // Render cursor if focused
     if (isFocused) {
-      const valueLength = value.length;
-      const actualCursorPos = Math.min(cursorPos, valueLength);
-      const cursorX = cb.x + actualCursorPos;
+      const cursorX = cb.x + actualCursorPos - scrollOffset;
 
       if (cursorX >= cb.x && cursorX < cb.x + cb.width) {
         const hasCharAtCursor = actualCursorPos < value.length;

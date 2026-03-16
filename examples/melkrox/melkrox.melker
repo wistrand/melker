@@ -1043,11 +1043,13 @@ export async function handleInput() {
       htmlParts.push('hr{border:none;border-top:1px solid #333;margin:2em 0}');
       htmlParts.push('</style></head><body>');
       htmlParts.push('<h1>' + title + '</h1>');
-      let turnNum = -1;
+      // Count assistant messages in history to compute starting turn number
+      const assistantCount = gameState.history.filter(e => e.role === 'assistant').length;
+      let turnNum = gameState.turnCount - assistantCount;
+      let started = false;
       for (let i = 0; i < gameState.history.length; i++) {
         const entry = gameState.history[i];
         if (entry.role === 'assistant') {
-          turnNum++;
           const parsed = parseJSON(entry._raw || entry.content);
           const narrative = parsed ? parsed.narrative : entry.content;
           const imgKey = currentGameId ? 'image:' + currentGameId + ':' + turnNum : 'image:' + turnNum;
@@ -1057,10 +1059,12 @@ export async function handleInput() {
           if (parsed?.location) htmlParts.push('<div class="location">' + parsed.location + '</div>');
           if (cachedImg) htmlParts.push('<img src="' + decoder.decode(cachedImg) + '">');
           htmlParts.push('<p>' + (narrative || '').replace(/\n/g, '</p><p>') + '</p>');
+          turnNum++;
+          started = true;
         } else if (entry.role === 'user') {
           const actionMatch = entry.content.match(/<ACTION>([\s\S]*?)<\/ACTION>/);
           const action = actionMatch ? actionMatch[1].trim() : entry.content;
-          if (turnNum >= 0) htmlParts.push('<div class="action">' + action + '</div>');
+          if (started) htmlParts.push('<div class="action">' + action + '</div>');
         }
       }
       // Append current turn if not already in history

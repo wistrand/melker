@@ -1274,12 +1274,28 @@ export async function handleInput() {
       $melker.render();
       log(logId, 'Location: ' + (scene.location || gameState.location));
     } else {
-      // Non-JSON response — treat as failed, let player retry
-      gameState.history.pop();
-      log(logId, 'Invalid response (not JSON) — retry');
+      // Non-JSON response — auto-retry once before showing manual retry
       logger.warn('Non-JSON turn response: ' + response.slice(0, 200));
-      showRetryButton(logId, cmd);
-      return;
+      log(logId, 'Invalid response (not JSON) — auto-retrying...');
+      const retryResponse = await callOpenRouterStreaming(
+        'CRITICAL: Respond with ONLY a raw JSON object. No markdown, no fences, no text before or after.\n\n' + gameState.worldConfig.systemPrompt + '\n\n' + TURN_RULES,
+        gameState.history
+      );
+      const retryScene = retryResponse ? parseJSON(retryResponse) : null;
+      if (retryScene) {
+        gameState.turnCount++;
+        gameState.history.push({ role: 'assistant', content: retryScene.narrative || retryResponse, _raw: retryResponse });
+        applyScene(retryScene);
+        renderScene();
+        $melker.render();
+        log(logId, 'Auto-retry succeeded');
+      } else {
+        gameState.history.pop();
+        log(logId, 'Auto-retry also failed — manual retry');
+        logger.warn('Auto-retry also non-JSON: ' + (retryResponse || '(empty)').slice(0, 200));
+        showRetryButton(logId, cmd);
+        return;
+      }
     }
 
     // Save state immediately so fast-clicking doesn't lose turns
@@ -1711,7 +1727,7 @@ async function generateSceneImage(logId, customStyle) {
 
     // Use LLM-generated image prompt if available, fall back to scene narrative
     const sceneDesc = gameState.sceneImagePrompt || gameState.currentScene || '';
-    const imagePrompt = 'Generate a scene illustration.\n'
+    const imagePrompt = 'Generate a scene image.\n'
       + '<STYLE>\n'
       + styleBlock
       + '</STYLE>\n'
@@ -1859,7 +1875,7 @@ narrative: SHORT (2-4 sentences). Focus on action, dialogue, discovery, conseque
 charactersInScene: REQUIRED — lowercase names of characters physically present (matching appearance: fact keys). Include the protagonist. Empty array if none.
 imagePrompt: REQUIRED — a visual description of THIS scene's narrative. What a camera would see: action, environment, lighting, atmosphere. Must match the narrative — do not invent content not in the scene. Refer to characters by name so they match the <CHARACTERS> block injected from facts (e.g. "Elena crouches behind a crate" not "a woman crouches"). Do NOT repeat their full appearance — just use their name. 1-3 sentences.
 imageStyle: OPTIONAL — only when this scene's mood deviates significantly from the default style (dream sequence, flashback, tonal shift). Omit for normal scenes.
-mood: OPTIONAL — animated atmosphere effect on the scene image. Use sparingly. String or array of up to 2. Available: "lightning", "rain", "bloom", "sunrays", "glitch", "fog", "fire", "underwater", "snow", "darkness", "sandstorm", "magic", "heat". Omit or null for no effect. Each turn replaces the previous.
+mood: OPTIONAL — animated atmosphere effect on the scene image. Include when the scene has notable atmosphere — storms, magic, danger, beauty, darkness, warmth, mystery. String or array of up to 2. Available: "lightning", "rain", "bloom", "sunrays", "glitch", "fog", "fire", "underwater", "snow", "darkness", "sandstorm", "magic", "heat". Omit or null for calm/neutral scenes only. Each turn replaces the previous.
 </FIELD_RULES>
 
 <STATE_TRACKING>
@@ -1946,6 +1962,8 @@ Respond with ONLY a JSON object (no markdown fences) with these fields:
 Detect the language of the player's prompt. ALL content (title, setting, narrative, locations, characters, choices, threads, narratorPrompt) MUST be in that same language. If the prompt is in Swedish, everything must be in Swedish. If in English, everything in English.
 </LANGUAGE>`;
 
+function isGeminiModel(m) { return m.includes('gemini'); }
+
 async function callOpenRouter(systemPrompt, messages, useModel) {
   const m = useModel || model;
   const msgCount = messages.length;
@@ -1963,9 +1981,10 @@ async function callOpenRouter(systemPrompt, messages, useModel) {
       { role: 'system', content: systemPrompt },
       ...messages
     ],
-    temperature: 0.8,
+    temperature: isGeminiModel(m) ? 0.5 : 0.8,
     max_tokens: 2048
   };
+  if (isGeminiModel(m)) body.response_format = { type: 'json_object' };
 
   const bodyJson = JSON.stringify(body);
   logger.debug('POST openrouter.ai/api/v1/chat/completions | bodySize=' + bodyJson.length + ' bytes');
@@ -2019,9 +2038,10 @@ async function callOpenRouterStreaming(systemPrompt, messages) {
       { role: 'system', content: systemPrompt },
       ...messages
     ],
-    temperature: 0.8,
+    temperature: isGeminiModel(model) ? 0.5 : 0.8,
     max_tokens: 2048
   };
+  if (isGeminiModel(model)) body.response_format = { type: 'json_object' };
 
   const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
     method: 'POST',
@@ -2065,9 +2085,10 @@ async function callOpenRouterStreamingWithModel(systemPrompt, messages, useModel
       { role: 'system', content: systemPrompt },
       ...messages
     ],
-    temperature: 0.8,
+    temperature: isGeminiModel(m) ? 0.5 : 0.8,
     max_tokens: 4096
   };
+  if (isGeminiModel(m)) body.response_format = { type: 'json_object' };
 
   const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
     method: 'POST',
@@ -2349,6 +2370,7 @@ function showImageRetryButton(logId, customStyle) {
       if (idx !== -1) choicesBar.children.splice(idx, 1);
       $melker.render();
       const result = await generateSceneImage(logId, customStyle);
+      setSpinner('game-spinner', false);
       renderScene();
       if (result === 'failed') showImageRetryButton(logId, customStyle);
       $melker.render();

@@ -253,7 +253,7 @@
   </container>
     <container style="padding-left: 2"><spinner id="game-spinner" variant="dots" verbs="thinking" spinning="false" shade="true" style="visibility: hidden; padding-left: 2;" /></container>
   <container id="log-area"></container>
-  <text id="cost-bar" style="display: none; padding-left: 2; color: var(--theme-text-muted);"></text>
+  <text id="cost-bar" style="padding-left: 2; color: var(--theme-text-muted);"></text>
 </container>
 
 <script>
@@ -293,7 +293,7 @@ function updateCostBar() {
   const bar = $melker.getElementById('cost-bar');
   if (bar.props.style?.display === 'none') return;
   const totalTokens = sessionTokens.prompt + sessionTokens.completion;
-  if (totalTokens === 0) { bar.props.text = ''; return; }
+  if (totalTokens === 0) { bar.props.text = '0k in | 0k out'; return; }
   const parts = [
     (sessionTokens.prompt / 1000).toFixed(1) + 'k in',
     (sessionTokens.completion / 1000).toFixed(1) + 'k out'
@@ -1125,7 +1125,7 @@ export async function handleInput() {
     setSpinner('game-spinner', true, 'restyling');
     try {
       const result = await callOpenRouter(
-        'You are a creative image style director. Given the current image style and constraints, apply the requested modification boldly — reshape the entire aesthetic if the modification calls for it. Return ONLY a raw JSON object: {"style": "full new style description", "constraints": "full new constraints"}. Write rich, evocative style descriptions that capture mood, palette, lighting, texture, and artistic influences. Constraints should always include "Wide 3:1 format" unless the modification explicitly requests or implies a different aspect ratio.',
+        'Rewrite the image style based on the modification. If the modification names a new style (e.g. "watercolor", "pixel art"), replace the old style entirely — do not merge. If it is a tweak (e.g. "darker", "more contrast"), adjust the existing style. Return ONLY: {"style": "1-2 sentences max", "constraints": "format and avoid rules, 1 sentence"}. Be concise. Constraints must include "Wide 3:1 format" unless a different ratio is requested or implied.',
         [{ role: 'user', content: 'Current style: ' + currentStyle + '\nCurrent constraints: ' + currentConstraints + '\nModification: ' + modification }]
       );
       const parsed = parseJSON(result);
@@ -2281,7 +2281,7 @@ function showScreen(id) {
   }
 }
 
-function showGameScreen() { showScreen('game-screen'); }
+function showGameScreen() { showScreen('game-screen'); updateCostBar(); }
 function showSetupScreen() { showScreen('setup-container'); }
 function showSelectScreen() {
   renderGamesList();

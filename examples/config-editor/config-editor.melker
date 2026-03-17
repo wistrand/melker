@@ -3,8 +3,8 @@
 <policy>
 {
   "permissions": {
-    "read": ["~/.config/melker"],
-    "write": ["~/.config/melker"]
+    "read": ["$configDir"],
+    "write": ["$configDir"]
   }
 }
 </policy>

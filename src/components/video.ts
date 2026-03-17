@@ -37,6 +37,7 @@ import { getGlobalPaletteCache } from '../sixel/palette.ts';
 import { isStdoutEnabled } from '../stdout.ts';
 import { cwd, readTextFile, Command } from '../runtime/mod.ts';
 import type { ChildProcess } from '../runtime/mod.ts';
+import { getToastManager } from '../toast/mod.ts';
 
 // Re-export types for backwards compatibility
 export type { DitherMode } from '../video/dither.ts';
@@ -291,7 +292,12 @@ export class VideoElement extends CanvasElement implements Disposable {
       stderr: 'piped'
     });
 
-    this._audioProcess = ffmpegCmd.spawn();
+    try {
+      this._audioProcess = ffmpegCmd.spawn();
+    } catch (error) {
+      logger.warn('Audio stream ffmpeg spawn failed: ' + (error instanceof Error ? error.message : String(error)));
+      return;
+    }
     logger.info('Started audio stream for waveform', { src, startTime, samplesPerFrame: this._audioSamplesPerFrame });
 
     // Start reading audio samples
@@ -688,6 +694,7 @@ export class VideoElement extends CanvasElement implements Disposable {
       this._autoplayStarted = true;
       this.play().catch((err) => {
         this.props.onError?.(err);
+        this.props.renderCallback?.();
       });
     }
   }
@@ -951,7 +958,20 @@ export class VideoElement extends CanvasElement implements Disposable {
       stderr: 'piped'
     });
 
-    this._videoProcess = ffmpegCmd.spawn();
+    try {
+      this._videoProcess = ffmpegCmd.spawn();
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      const isPermission = msg.includes('ermission');
+      const toastMsg = isPermission
+        ? 'Video: missing "run" permission for ffmpeg'
+        : 'Video: ffmpeg failed — ' + msg;
+      logger.warn(toastMsg);
+      if (!this._videoOptions?.onError) {
+        try { getToastManager().show(toastMsg, { type: 'error' }); } catch { /* toast not ready */ }
+      }
+      throw error;
+    }
     this._videoPlaying = true;
     this._videoPaused = false;
 

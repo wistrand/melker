@@ -19,7 +19,7 @@ export {
   formatPolicy,
 } from './loader.ts';
 
-export { policyToDenoFlags, formatDenoFlags } from './flags.ts';
+export { policyToDenoFlags, formatDenoFlags, expandPolicyPath } from './flags.ts';
 
 export type { ApprovalRecord } from './approval.ts';
 

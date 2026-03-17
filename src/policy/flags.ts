@@ -2,7 +2,7 @@
 
 import { resolve } from '../deps.ts';
 import type { MelkerPolicy, PolicyPermissions } from './types.ts';
-import { getTempDir } from '../xdg.ts';
+import { getTempDir, getConfigDir, getCacheDir, getStateDir, getDataDir } from '../xdg.ts';
 import { Env } from '../env.ts';
 import { MelkerConfigCore as MelkerConfig } from '../config/config-core.ts';
 import { extractHostFromUrl, extractHostOrValue } from './url-utils.ts';
@@ -191,30 +191,44 @@ export function policyToDenoFlags(
 }
 
 /**
- * Expand "cwd" in a deny list to the actual cwd path
+ * Expand a policy path value to an absolute path.
+ * Handles: cwd, $configDir/$cacheDir/$stateDir/$dataDir/$tempDir/$appDir, ~/..., and relative paths.
+ * Returns null if the path cannot be resolved (e.g. cwd inaccessible).
  */
-function expandCwdInDenyList(deniedPaths: string[] | undefined): string[] | undefined {
+export function expandPolicyPath(p: string, appDir: string): string | null {
+  // Special "cwd" value
+  if (p === 'cwd') {
+    try { return cwd(); } catch { return null; }
+  }
+  // Policy path variables
+  if (p.startsWith('$configDir')) return p.replace('$configDir', getConfigDir());
+  if (p.startsWith('$cacheDir'))  return p.replace('$cacheDir', getCacheDir());
+  if (p.startsWith('$stateDir'))  return p.replace('$stateDir', getStateDir());
+  if (p.startsWith('$dataDir'))   return p.replace('$dataDir', getDataDir());
+  if (p.startsWith('$tempDir'))   return p.replace('$tempDir', getTempDir());
+  if (p.startsWith('$appDir'))    return p.replace('$appDir', appDir);
+  // Tilde expansion
+  if (p.startsWith('~/')) return `${Env.get('HOME') || '/tmp'}${p.slice(1)}`;
+  // Relative → absolute
+  if (!p.startsWith('/')) return resolve(appDir, p);
+  return p;
+}
+
+/**
+ * Expand policy paths in a deny list
+ */
+function expandDenyPaths(deniedPaths: string[] | undefined, appDir: string): string[] | undefined {
   if (!deniedPaths?.length) return deniedPaths;
-  return deniedPaths.map(p => {
-    if (p === 'cwd') {
-      try {
-        return cwd();
-      } catch {
-        return p;
-      }
-    }
-    return p;
-  });
+  return deniedPaths.map(p => expandPolicyPath(p, appDir) || p).filter(Boolean);
 }
 
 /**
  * Check if a path should be denied based on deny list
  * A path is denied if it matches or is under a denied path
  */
-function isPathDenied(path: string, deniedPaths: string[] | undefined): boolean {
+function isPathDenied(path: string, deniedPaths: string[] | undefined, appDir = '.'): boolean {
   if (!deniedPaths?.length) return false;
-  // Expand "cwd" to actual path for comparison
-  const expandedDenies = expandCwdInDenyList(deniedPaths);
+  const expandedDenies = expandDenyPaths(deniedPaths, appDir);
   if (!expandedDenies?.length) return false;
   for (const denied of expandedDenies) {
     // Exact match or path is under denied directory
@@ -254,24 +268,11 @@ function buildPermissionPaths(
     }
   }
 
-  // Policy paths (resolve relative to app dir)
+  // Policy paths (expand variables, tilde, cwd, relative paths)
   if (policyPaths) {
     for (const p of policyPaths) {
-      // Special "cwd" value expands to current working directory
-      if (p === 'cwd') {
-        try {
-          const cwdPath = cwd();
-          if (!isPathDenied(cwdPath, denyPaths)) {
-            paths.push(cwdPath);
-          }
-        } catch {
-          // Ignore if cwd is not accessible
-        }
-        continue;
-      }
-      const expanded = p.startsWith('~/') ? `${Env.get('HOME') || '/tmp'}${p.slice(1)}` : p;
-      const resolved = expanded.startsWith('/') ? expanded : resolve(appDir, expanded);
-      if (!isPathDenied(resolved, denyPaths)) {
+      const resolved = expandPolicyPath(p, appDir);
+      if (resolved && !isPathDenied(resolved, denyPaths, appDir)) {
         paths.push(resolved);
       }
     }

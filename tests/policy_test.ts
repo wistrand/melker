@@ -9,6 +9,7 @@ import {
   formatPolicy,
   policyToDenoFlags,
   formatDenoFlags,
+  expandPolicyPath,
   type MelkerPolicy,
   type PolicyPermissions,
 } from '../src/policy/mod.ts';
@@ -1908,4 +1909,151 @@ Deno.test({
       await Deno.remove(tempDir, { recursive: true });
     }
   },
+});
+
+// =============================================================================
+// Policy Path Variable Expansion Tests
+// =============================================================================
+
+Deno.test('expandPolicyPath resolves $configDir', () => {
+  const result = expandPolicyPath('$configDir', '/app');
+  assertExists(result);
+  assert(result.endsWith('/melker'), `expected path ending in /melker, got: ${result}`);
+  assertEquals(result.includes('$'), false, 'should not contain $ after expansion');
+});
+
+Deno.test('expandPolicyPath resolves $configDir with subpath', () => {
+  const result = expandPolicyPath('$configDir/myapp', '/app');
+  assertExists(result);
+  assert(result.endsWith('/melker/myapp'), `expected path ending in /melker/myapp, got: ${result}`);
+});
+
+Deno.test('expandPolicyPath resolves $cacheDir', () => {
+  const result = expandPolicyPath('$cacheDir', '/app');
+  assertExists(result);
+  assert(result.endsWith('/melker'), `expected path ending in /melker, got: ${result}`);
+  assert(result.includes('cache') || result.includes('Cache'), `expected cache in path, got: ${result}`);
+});
+
+Deno.test('expandPolicyPath resolves $stateDir', () => {
+  const result = expandPolicyPath('$stateDir', '/app');
+  assertExists(result);
+  assert(result.endsWith('/melker'), `expected path ending in /melker, got: ${result}`);
+  assert(result.includes('state') || result.includes('State'), `expected state in path, got: ${result}`);
+});
+
+Deno.test('expandPolicyPath resolves $dataDir', () => {
+  const result = expandPolicyPath('$dataDir', '/app');
+  assertExists(result);
+  assert(result.endsWith('/melker'), `expected path ending in /melker, got: ${result}`);
+});
+
+Deno.test('expandPolicyPath resolves $tempDir', () => {
+  const result = expandPolicyPath('$tempDir', '/app');
+  assertExists(result);
+  assert(result.startsWith('/'), `expected absolute path, got: ${result}`);
+});
+
+Deno.test('expandPolicyPath resolves $appDir', () => {
+  const result = expandPolicyPath('$appDir', '/my/app');
+  assertEquals(result, '/my/app');
+});
+
+Deno.test('expandPolicyPath resolves $appDir with subpath', () => {
+  const result = expandPolicyPath('$appDir/data', '/my/app');
+  assertEquals(result, '/my/app/data');
+});
+
+Deno.test('expandPolicyPath resolves cwd', () => {
+  const result = expandPolicyPath('cwd', '/app');
+  assertEquals(result, Deno.cwd());
+});
+
+Deno.test('expandPolicyPath resolves tilde', () => {
+  const result = expandPolicyPath('~/Documents', '/app');
+  assertExists(result);
+  assert(result.endsWith('/Documents'), `expected path ending in /Documents, got: ${result}`);
+  assertEquals(result.includes('~'), false, 'should not contain ~ after expansion');
+});
+
+Deno.test('expandPolicyPath resolves relative paths', () => {
+  const result = expandPolicyPath('data/files', '/my/app');
+  assertEquals(result, '/my/app/data/files');
+});
+
+Deno.test('expandPolicyPath passes absolute paths through', () => {
+  const result = expandPolicyPath('/absolute/path', '/app');
+  assertEquals(result, '/absolute/path');
+});
+
+Deno.test('expandPolicyPath leaves unknown $variables as-is', () => {
+  const result = expandPolicyPath('$unknownVar', '/app');
+  // Unknown $ vars are not path-starting, so treated as relative
+  assertExists(result);
+});
+
+Deno.test('policyToDenoFlags expands $configDir in read permissions', () => {
+  const policy: MelkerPolicy = {
+    permissions: {
+      read: ['$configDir'],
+    },
+  };
+
+  const flags = policyToDenoFlags(policy, '/app');
+  const readFlag = flags.find(f => f.startsWith('--allow-read='));
+  assertExists(readFlag);
+  assertEquals(readFlag.includes('$configDir'), false, '$configDir should be expanded');
+  assert(readFlag.includes('/melker'), `expected resolved path containing /melker, got: ${readFlag}`);
+});
+
+Deno.test('policyToDenoFlags expands $configDir in write permissions', () => {
+  const policy: MelkerPolicy = {
+    permissions: {
+      write: ['$configDir'],
+    },
+  };
+
+  const flags = policyToDenoFlags(policy, '/app');
+  const writeFlag = flags.find(f => f.startsWith('--allow-write='));
+  assertExists(writeFlag);
+  assertEquals(writeFlag.includes('$configDir'), false, '$configDir should be expanded');
+});
+
+Deno.test('policyToDenoFlags expands mixed path types', () => {
+  const policy: MelkerPolicy = {
+    permissions: {
+      read: ['$configDir', 'cwd', '~/docs', '/absolute'],
+    },
+  };
+
+  const flags = policyToDenoFlags(policy, '/app');
+  const readFlag = flags.find(f => f.startsWith('--allow-read='));
+  assertExists(readFlag);
+  assertEquals(readFlag.includes('$configDir'), false, '$configDir should be expanded');
+  assertEquals(readFlag.includes(',cwd'), false, 'cwd should be expanded');
+  assertStringIncludes(readFlag, '/absolute');
+});
+
+Deno.test('formatPolicy shows resolved path for $configDir', () => {
+  const policy: MelkerPolicy = {
+    permissions: {
+      read: ['$configDir'],
+    },
+  };
+
+  const output = formatPolicy(policy);
+  assertStringIncludes(output, '$configDir');
+  assertStringIncludes(output, '(');  // Should show resolved path in parens
+});
+
+Deno.test('formatPolicy shows resolved path for tilde paths', () => {
+  const policy: MelkerPolicy = {
+    permissions: {
+      write: ['~/mydata'],
+    },
+  };
+
+  const output = formatPolicy(policy);
+  assertStringIncludes(output, '~/mydata');
+  assertStringIncludes(output, '(');  // Should show resolved path in parens
 });

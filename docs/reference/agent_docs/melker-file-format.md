@@ -1056,6 +1056,19 @@ Apps declare required permissions via a `<policy>` tag. The app runs in a sandbo
 - `"samesite"` in `net` - expands to the host of the source URL (for remote apps)
 - `$ENV{VAR}` or `$ENV{VAR:-default}` - environment variable substitution
 
+**Path variables** in `read`/`write` — platform-correct XDG directories:
+
+| Variable     | Default (Linux)         | Purpose           |
+|--------------|-------------------------|--------------------|
+| `$configDir` | `~/.config/melker`      | User config files  |
+| `$cacheDir`  | `~/.cache/melker`       | Cache data         |
+| `$stateDir`  | `~/.local/state/melker` | Persistent state   |
+| `$dataDir`   | `~/.local/share/melker` | User data          |
+| `$tempDir`   | `/tmp`                  | Temporary files    |
+| `$appDir`    | *(app source dir)*      | .melker file dir   |
+
+Subpaths work: `"$configDir/myapp"` → `~/.config/melker/myapp`. Prefer `$configDir` over `~/.config/melker` for cross-platform compatibility.
+
 **Auto-policy (no `<policy>` tag):** Local files without a policy get `read: ["cwd"], clipboard: true` by default, enabling file access in working directory and text selection copy (Alt+C).
 
 ### CLI Options

@@ -7,8 +7,9 @@
     "description": "Terminal slideshow presenter for markdown slides",
     "permissions": {
       "read": ["cwd"],
-      "browser": true
-    }
+      "browser": true,
+      "run": ["ffmpeg", "ffprobe", "ffplay"]
+      }
   }
   </policy>
 

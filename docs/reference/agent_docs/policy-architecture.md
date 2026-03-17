@@ -326,9 +326,37 @@ engine.hasPermission('ai')       // true if ai: true
 
 The `all: true` permission grants all runtime permissions.
 
-### Tilde (`~`) Expansion
+### Path Expansion
 
-Permission paths starting with `~/` are expanded to the user's home directory (`$HOME`). This allows policies to reference user-specific directories:
+Permission paths in `read` and `write` arrays support several expansion forms, all resolved at flag generation time:
+
+#### Path Variables
+
+Variables reference platform-correct XDG directories (respecting `XDG_CONFIG_HOME`, etc.):
+
+| Variable       | Default (Linux)           | Purpose              |
+|----------------|---------------------------|----------------------|
+| `$configDir`   | `~/.config/melker`        | User config files    |
+| `$cacheDir`    | `~/.cache/melker`         | Cache data           |
+| `$stateDir`    | `~/.local/state/melker`   | Persistent state     |
+| `$dataDir`     | `~/.local/share/melker`   | User data            |
+| `$tempDir`     | `/tmp`                    | Temporary files      |
+| `$appDir`      | *(app source directory)*  | .melker file dir     |
+
+```json
+{
+  "permissions": {
+    "read": ["$configDir"],
+    "write": ["$configDir"]
+  }
+}
+```
+
+Subpaths work: `"$configDir/myapp"` → `~/.config/melker/myapp`.
+
+#### Tilde (`~`) Expansion
+
+Paths starting with `~/` expand to the user's home directory (`$HOME`):
 
 ```json
 {
@@ -339,11 +367,11 @@ Permission paths starting with `~/` are expanded to the user's home directory (`
 }
 ```
 
-The path `~/.config/melker` expands to `/home/user/.config/melker` at runtime. Without tilde expansion, such paths would be resolved relative to the app directory.
+**Prefer `$configDir` over `~/.config/melker`** — it respects `XDG_CONFIG_HOME` and works cross-platform.
 
-### `cwd` Special Value
+#### `cwd` Special Value
 
-The special value `"cwd"` in `read` or `write` arrays expands to the current working directory at runtime. This allows relative paths in the app to work as long as they resolve within the project directory:
+The value `"cwd"` expands to the current working directory at runtime:
 
 ```json
 {
@@ -355,6 +383,23 @@ The special value `"cwd"` in `read` or `write` arrays expands to the current wor
 ```
 
 Use `--deny-read=cwd` or `--deny-write=cwd` to remove cwd access.
+
+#### Relative Paths
+
+Paths without a leading `/`, `~/`, or `$` are resolved relative to the app directory.
+
+#### `--show-policy` Display
+
+Path variables and `~/` paths show the resolved value in parentheses:
+
+```
+Filesystem (read):
+  $configDir (/home/user/.config/melker)
+  ~/mydata (/home/user/mydata)
+  cwd (/home/user/project)
+```
+
+All path expansion is handled by `expandPolicyPath()` in `src/policy/flags.ts`, used by both Deno and Node flag generation.
 
 ## Passing Overrides to Runner
 
@@ -373,17 +418,18 @@ applyPermissionOverrides(policy.permissions, overrides);
 
 ## Files
 
-| File                                | Purpose                                          |
-|-------------------------------------|--------------------------------------------------|
-| `src/policy/types.ts`               | `MelkerPolicy`, `PolicyPermissions` types        |
-| `src/policy/loader.ts`              | Parse policy from file content                   |
-| `src/policy/flags.ts`               | Convert policy to Deno flags, implicit paths     |
-| `src/policy/permission-overrides.ts` | CLI `--allow-*`/`--deny-*` handling             |
-| `src/policy/shortcut-utils.ts`      | Permission shortcut expansion (ai, clipboard, etc.) |
-| `src/policy/approval.ts`            | Approval prompts and storage                     |
-| `src/policy/url-utils.ts`           | Extract hosts from URLs for net permissions      |
-| `melker-launcher.ts`                | Orchestrates policy loading, approval, subprocess |
-| `src/melker-runner.ts`              | Runs in sandbox, applies overrides for runtime   |
+| File                                | Purpose                                               |
+|-------------------------------------|-------------------------------------------------------|
+| `src/policy/types.ts`               | `MelkerPolicy`, `PolicyPermissions` types             |
+| `src/policy/loader.ts`              | Parse policy from file content, `formatPolicy` display |
+| `src/policy/flags.ts`               | Convert policy to Deno flags, `expandPolicyPath`      |
+| `src/policy/flags-node.ts`          | Convert policy to Node.js permission flags            |
+| `src/policy/permission-overrides.ts` | CLI `--allow-*`/`--deny-*` handling                  |
+| `src/policy/shortcut-utils.ts`      | Permission shortcut expansion (ai, clipboard, etc.)   |
+| `src/policy/approval.ts`            | Approval prompts and storage                          |
+| `src/policy/url-utils.ts`           | Extract hosts from URLs for net permissions           |
+| `melker-launcher.ts`                | Orchestrates policy loading, approval, subprocess     |
+| `src/melker-runner.ts`              | Runs in sandbox, applies overrides for runtime        |
 
 ## Examples
 

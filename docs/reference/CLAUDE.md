@@ -127,9 +127,9 @@ New to Melker? Read in this order:
 
 ### Plans
 
-| Topic                  | Plan                                                                          |
-|------------------------|-------------------------------------------------------------------------------|
-| Inline (partial-screen) | [inline-mode-plan.md](agent_docs/inline-mode-plan.md)                        |
+| Topic                   | Plan                                                                          |
+|-------------------------|-------------------------------------------------------------------------------|
+| Inline (partial-screen) | [inline-mode-plan.md](agent_docs/inline-mode-plan.md)                         |
 
 ### Project
 

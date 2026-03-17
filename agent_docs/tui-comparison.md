@@ -1,6 +1,6 @@
 # TUI Framework Comparison
 
-Comparison of terminal UI libraries across languages. Last updated: March 11, 2026.
+Comparison of terminal UI libraries across languages. Last updated: March 17, 2026.
 
 ## Overview
 

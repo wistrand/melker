@@ -5,6 +5,7 @@ import type { MelkerPolicy, PolicyLoadResult } from './types.ts';
 import { Env } from '../env.ts';
 import { extractHostFromUrl } from './url-utils.ts';
 import { readTextFile, cwd } from '../runtime/mod.ts';
+import { expandPolicyPath } from './flags.ts';
 
 /**
  * Strip HTML comments from content so that regex-based tag extraction
@@ -443,6 +444,15 @@ export function validatePolicy(policy: MelkerPolicy): string[] {
   return errors;
 }
 
+/** Format a policy path for display, showing resolved value for variables and tilde */
+function formatPolicyPath(path: string): string {
+  if (path.startsWith('$') || path.startsWith('~/')) {
+    const resolved = expandPolicyPath(path, '.');
+    if (resolved && resolved !== path) return `${path} (${resolved})`;
+  }
+  return path;
+}
+
 /**
  * Format policy for display
  * @param policy The policy to format
@@ -481,15 +491,10 @@ export function formatPolicy(policy: MelkerPolicy, sourceUrl?: string): string {
   if (p.read?.length) {
     lines.push('Filesystem (read):');
     for (const path of p.read) {
-      // Expand "cwd" to show actual path
       if (path === 'cwd') {
-        try {
-          lines.push(`  cwd (${cwd()})`);
-        } catch {
-          lines.push('  cwd');
-        }
+        try { lines.push(`  cwd (${cwd()})`); } catch { lines.push('  cwd'); }
       } else {
-        lines.push(`  ${path}`);
+        lines.push(`  ${formatPolicyPath(path)}`);
       }
     }
     lines.push('');
@@ -498,15 +503,10 @@ export function formatPolicy(policy: MelkerPolicy, sourceUrl?: string): string {
   if (p.write?.length) {
     lines.push('Filesystem (write):');
     for (const path of p.write) {
-      // Expand "cwd" to show actual path
       if (path === 'cwd') {
-        try {
-          lines.push(`  cwd (${cwd()})`);
-        } catch {
-          lines.push('  cwd');
-        }
+        try { lines.push(`  cwd (${cwd()})`); } catch { lines.push('  cwd'); }
       } else {
-        lines.push(`  ${path}`);
+        lines.push(`  ${formatPolicyPath(path)}`);
       }
     }
     lines.push('');

@@ -2,6 +2,9 @@
 
 import { Command } from '../runtime/mod.ts';
 import { MelkerConfig } from '../config/mod.ts';
+import { getLogger } from '../logging.ts';
+
+const logger = getLogger('video');
 
 /**
  * Parse extra ffmpeg input flags from config into an args array.
@@ -55,7 +58,9 @@ export async function getVideoDimensions(src: string): Promise<VideoDimensions> 
     const width = parseInt(widthStr) || DEFAULT_VIDEO_DIMENSIONS.width;
     const height = parseInt(heightStr) || DEFAULT_VIDEO_DIMENSIONS.height;
     return { width, height };
-  } catch {
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error);
+    logger.warn('ffprobe failed: ' + msg);
     return DEFAULT_VIDEO_DIMENSIONS;
   }
 }

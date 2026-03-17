@@ -14,6 +14,7 @@ import { Env } from '../env.ts';
 import { MelkerConfigCore as MelkerConfig } from '../config/config-core.ts';
 import { expandShortcutsInPlace } from './shortcut-utils.ts';
 import { cwd } from '../runtime/mod.ts';
+import { expandPolicyPath } from './flags.ts';
 
 /**
  * Ensure a path ends with /* for Node's --permission model.
@@ -169,18 +170,11 @@ function buildNodeReadPaths(
     paths.push(dirGlob(`${xdgCache}/melker/app-cache/${urlHash}`));
   }
 
-  // Policy-declared read paths (resolve relative to appDir)
+  // Policy-declared read paths (expand variables, tilde, cwd, relative paths)
   if (policyPaths) {
     for (const p of policyPaths) {
-      if (p === 'cwd') {
-        try {
-          paths.push(dirGlob(cwd()));
-        } catch {
-          // Ignore
-        }
-        continue;
-      }
-      paths.push(dirGlob(p.startsWith('/') ? p : resolve(appDir, p)));
+      const resolved = expandPolicyPath(p, appDir);
+      if (resolved) paths.push(dirGlob(resolved));
     }
   }
 
@@ -222,18 +216,11 @@ function buildNodeWritePaths(
     paths.push(dirGlob(`${xdgCache}/melker/app-cache/${urlHash}`));
   }
 
-  // Policy-declared write paths (resolve relative to appDir)
+  // Policy-declared write paths (expand variables, tilde, cwd, relative paths)
   if (policyPaths) {
     for (const p of policyPaths) {
-      if (p === 'cwd') {
-        try {
-          paths.push(dirGlob(cwd()));
-        } catch {
-          // Ignore
-        }
-        continue;
-      }
-      paths.push(dirGlob(p.startsWith('/') ? p : resolve(appDir, p)));
+      const resolved = expandPolicyPath(p, appDir);
+      if (resolved) paths.push(dirGlob(resolved));
     }
   }
 

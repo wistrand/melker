@@ -1,21 +1,21 @@
 # TUI Framework Comparison
 
-Comparison of terminal UI libraries across languages. Last updated: March 11, 2026.
+Comparison of terminal UI libraries across languages. Last updated: March 17, 2026.
 
 ## Overview
 
 | Library                                                    | Language        | Stars  | Paradigm              | Layout         |
 |------------------------------------------------------------|-----------------|--------|-----------------------|----------------|
 | **Melker**                                                 | TypeScript/Deno+Node | New    | HTML-like declarative | Flexbox        |
-| [Ink](https://github.com/vadimdemedes/ink)                 | JavaScript/Node | 35.4k  | React components      | Flexbox (Yoga) |
-| [OpenTUI](https://github.com/sst/opentui)                 | TypeScript+Zig/Bun | 9.1k | React/SolidJS/Vue     | Flexbox (Yoga) |
+| [Ink](https://github.com/vadimdemedes/ink)                 | JavaScript/Node | 35.6k  | React components      | Flexbox (Yoga) |
+| [OpenTUI](https://github.com/sst/opentui)                 | TypeScript+Zig/Bun | 9.4k | React/SolidJS/Vue     | Flexbox (Yoga) |
 | [Blessed](https://github.com/chjj/blessed)                | JavaScript/Node | 11.8k  | Imperative widgets    | CSS-like       |
-| [Bubble Tea](https://github.com/charmbracelet/bubbletea)  | Go              | 40.2k  | Elm architecture      | CSS-like       |
-| [tview](https://github.com/rivo/tview)                    | Go              | 13.6k  | Imperative widgets    | Grid/Flex      |
-| [Textual](https://github.com/Textualize/textual)          | Python          | 34.6k  | Async widgets         | CSS/Grid       |
-| [Ratatui](https://github.com/ratatui/ratatui)             | Rust            | 18.8k  | Immediate mode        | Constraints    |
+| [Bubble Tea](https://github.com/charmbracelet/bubbletea)  | Go              | 40.7k  | Elm architecture      | CSS-like       |
+| [tview](https://github.com/rivo/tview)                    | Go              | 13.7k  | Imperative widgets    | Grid/Flex      |
+| [Textual](https://github.com/Textualize/textual)          | Python          | 34.9k  | Async widgets         | CSS/Grid       |
+| [Ratatui](https://github.com/ratatui/ratatui)             | Rust            | 19.1k  | Immediate mode        | Constraints    |
 | [Terminal.Gui](https://github.com/gui-cs/Terminal.Gui)    | C#/.NET         | 10.8k  | Imperative widgets    | Computed       |
-| [FTXUI](https://github.com/ArthurSonzogni/FTXUI)          | C++             | 9.7k   | Functional/React-like | Flexbox        |
+| [FTXUI](https://github.com/ArthurSonzogni/FTXUI)          | C++             | 9.8k   | Functional/React-like | Flexbox        |
 | [ncurses](https://invisible-island.net/ncurses/)          | C               | Legacy | Low-level             | Manual         |
 
 ## Feature Matrix
@@ -39,7 +39,7 @@ Comparison of terminal UI libraries across languages. Last updated: March 11, 20
 | i18n (built-in)      |   Y    |  -  |    -    |    -    |     -      |   -   |    -    |    -    |      -       |   -   |
 | Node.js compat       |   Y    |  -  |    -    |    Y    |     -      |   -   |    -    |    -    |      -       |   -   |
 | Sync output (2026)   |   Y    |  Y  |    Y    |    -    |     Y      |   -   |    -    |    -    |      -       |   -   |
-| Maintained (Mar 2026)|   Y    |  Y  |    Y    |    -    |     Y      |   ~   |    Y    |    Y    |      Y       |   Y   |
+| Maintained (Mar 2026)|   Y    |  Y  |    Y    |    -    |     Y      |   Y   |    Y    |    Y    |      Y       |   Y   |
 
 Y = Full support, ~ = Partial/limited, - = Not available, Y* = Via extension
 
@@ -137,11 +137,11 @@ auto button = Button("Click", [&] { count++; });
 |            | Melker      | Ink         | OpenTUI     | Blessed     | Bubble Tea  | tview       | Textual     | Ratatui     | Terminal.Gui | FTXUI       |
 |------------|-------------|-------------|-------------|-------------|-------------|-------------|-------------|-------------|--------------|-------------|
 | Language   | TS/Deno+Node| JS/Node     | TS+Zig/Bun  | JS/Node     | Go          | Go          | Python      | Rust        | C#/.NET      | C++          |
-| Stars      | New         | 35.4k       | 9.1k        | 11.8k       | 40.2k       | 13.6k       | 34.6k       | 18.8k       | 10.8k        | 9.7k        |
+| Stars      | New         | 35.6k       | 9.4k        | 11.8k       | 40.7k       | 13.7k       | 34.9k       | 19.1k       | 10.8k        | 9.8k        |
 | Paradigm   | Declarative | React       | React/Solid/Vue | Imperative | Elm/MVU    | Imperative  | Async       | Immediate   | Imperative   | Functional  |
 | Build step | None        | Required    | Required    | None        | Required    | Required    | None        | Required    | Required     | Required    |
 | Widgets    | 30+         | ~15         | ~12         | 27+         | Via Bubbles | 15+         | 35+         | Via crates  | 40+          | 10+         |
-| Maintained | Y           | Y           | Y (pre-1.0) | Dead        | Y           | ~           | Y           | Y           | Y            | Y           |
+| Maintained | Y           | Y           | Y (pre-1.0) | Dead        | Y           | Y           | Y           | Y           | Y            | Y           |
 | Used by    | -           | Claude Code, Gemini CLI | OpenCode, terminal.shop | - | GitHub, GitLab | K9s, gh CLI | Posting, Toad | gitui    | .NET CLI tools | -          |
 
 ## Component Comparison
@@ -309,21 +309,21 @@ Y = Built-in, Y* = Via extension library
 | Pixel graphics             | **FTXUI**, **Ratatui**, **Melker**                 |
 | Embedded/no_std            | **Ratatui**                                        |
 | SSH/network serving        | **Bubble Tea**, **Textual**, **Melker**             |
-| Most GitHub stars          | **Bubble Tea** (40.2k), **Ink** (35.4k), **Textual** (34.6k) |
+| Most GitHub stars          | **Bubble Tea** (40.7k), **Ink** (35.6k), **Textual** (34.9k) |
 
 ## Recent Updates (2025-2026)
 
 | Library            | Version     | Notable Changes                                                                   |
 |--------------------|-------------|-----------------------------------------------------------------------------------|
-| **Melker**         | v2026.3.7   | i18n subsystem (@key sigils, message catalogs, plural/number/date), Node.js 25+ support, tile map (SVG overlays, disk cache), bind-selection, data boxplot, DevTools I18n tab |
+| **Melker**         | v2026.3.10  | i18n subsystem (@key sigils, message catalogs, plural/number/date), Node.js 25+ support, tile map (SVG overlays, disk cache), bind-selection, data boxplot, DevTools I18n tab, policy path variables |
 | **Ink**            | v6.8.0      | `renderToString()`, Mode 2026 sync output, Kitty keyboard, `useCursor` API for IME |
-| **OpenTUI**        | v0.1.86     | Very active pre-1.0. TS+Zig core, React/SolidJS/Vue reconcilers. 9.1k stars in ~8 months. Powers OpenCode. "Not ready for production use" per README |
-| **Bubble Tea**     | v2.0.1      | v2.0.0 (Feb 2026): View struct API, declarative views, "Cursed Renderer" (ncurses), Mode 2027 wide Unicode, Kitty keyboard, native clipboard. Bubbles v1.0.0, Lip Gloss v2.0.0-beta.3 |
-| **Textual**        | v8.0.2      | Rapid releases: 1.0 (Dec 2024) through 8.0.2 (Mar 2026). Catppuccin themes, screen mode signals. McGugan maintains as open source since Textualize wound down May 2025 |
-| **Ratatui**        | v0.30.0     | "Biggest release ever" (Dec 2025). no_std for embedded, modular workspace, `ratatui::run()` API, Sextant/Octant markers. 18.7M crates.io downloads. Ratzilla v0.3.0 (WebAssembly) |
+| **OpenTUI**        | v0.1.87     | Very active pre-1.0. TS+Zig core, React/SolidJS/Vue reconcilers. 9.4k stars in ~8 months. Powers OpenCode. "Not ready for production use" per README |
+| **Bubble Tea**     | v2.0.2      | v2.0.0 (Feb 2026): View struct API, declarative views, "Cursed Renderer" (ncurses), Mode 2027 wide Unicode, Kitty keyboard, native clipboard. Bubbles v1.0.0, Lip Gloss v2.0.0-beta.3 |
+| **Textual**        | v8.1.1      | Rapid releases: 1.0 (Dec 2024) through 8.1.1 (Mar 2026). Catppuccin themes, screen mode signals. McGugan maintains as open source since Textualize wound down May 2025 |
+| **Ratatui**        | v0.30.0     | "Biggest release ever" (Dec 2025). no_std for embedded, modular workspace, `ratatui::run()` API, Sextant/Octant markers. 19.1k stars. Ratzilla v0.3.0 (WebAssembly) |
 | **Terminal.Gui**   | v2 alpha    | v1.19 stable (Jun 2025). v2 beta at 99% (275/277 issues closed); v2 stable targeted Mar 31, 2026. True color, overhauled theming |
 | **FTXUI**          | v6.1.9      | Text selection, color transparency. Last tagged release May 2025, active commits through Mar 2026 |
-| **tview**          | Rolling     | Last commit Mar 2, 2026. Prior gap of 5+ months. K9s uses a fork (`derailed/tview`) |
+| **tview**          | Rolling     | Active commits through Mar 2026. K9s uses a fork (`derailed/tview`)                  |
 | **Blessed**        | Dead        | Last commit January 2016. neo-blessed fork has limited maintenance                |
 
 **Notes:**

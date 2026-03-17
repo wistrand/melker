@@ -106,7 +106,7 @@ export class ContentMeasurer {
       if (rowCount > 1) {
         wrappedHeight += gap * (rowCount - 1);
       }
-      resultWidth = totalWidth;
+      resultWidth = Math.min(totalWidth, availableWidth);
       resultHeight = wrappedHeight;
     } else {
       // For row layout: width is sum, height is max

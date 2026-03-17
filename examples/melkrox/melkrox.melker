@@ -614,7 +614,7 @@ export async function startGame() {
     const logged = {};
     const worldConfig = await callOpenRouterStreamingWithModel(
       SETUP_SYSTEM_PROMPT,
-      [{ role: 'user', content: storyPrompt.trim() }],
+      [{ role: 'user', content: storyPrompt.trim() + '\n\n(Variation seed: ' + Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2) + ')' }],
       setupModel,
       (partial) => {
         const L = (msg) => log(logId, msg, true);

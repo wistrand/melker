@@ -36,6 +36,22 @@ import {
   inspect,
   isMainModule,
 } from './runtime/mod.ts';
+import {
+  readTextFile as rtReadTextFile,
+  writeTextFile as rtWriteTextFile,
+  readFile as rtReadFile,
+  writeFile as rtWriteFile,
+  readDir as rtReadDir,
+  stat as rtStat,
+  lstat as rtLstat,
+  remove as rtRemove,
+  mkdir as rtMkdir,
+  makeTempDir as rtMakeTempDir,
+  makeTempFile as rtMakeTempFile,
+  isNotFoundError as rtIsNotFoundError,
+  isAlreadyExistsError as rtIsAlreadyExistsError,
+  isPermissionError as rtIsPermissionError,
+} from './runtime/mod.ts';
 
 // Import library to register components before template parsing
 import '../mod.ts';
@@ -780,6 +796,26 @@ export async function runMelkerFile(
         setPosition: (position: 'top' | 'bottom') => {
           getToastManager().setConfig({ position });
           engine.render();
+        },
+      },
+
+      // Runtime abstractions
+      runtime: {
+        fs: {
+          readTextFile: rtReadTextFile,
+          writeTextFile: rtWriteTextFile,
+          readFile: rtReadFile,
+          writeFile: rtWriteFile,
+          readDir: rtReadDir,
+          stat: rtStat,
+          lstat: rtLstat,
+          remove: rtRemove,
+          mkdir: rtMkdir,
+          makeTempDir: rtMakeTempDir,
+          makeTempFile: rtMakeTempFile,
+          isNotFoundError: rtIsNotFoundError,
+          isAlreadyExistsError: rtIsAlreadyExistsError,
+          isPermissionError: rtIsPermissionError,
         },
       },
 

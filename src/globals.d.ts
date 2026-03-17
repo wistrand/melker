@@ -173,6 +173,26 @@ export interface MelkerContext {
   // Cache API
   cache: import('./core-types.ts').EngineCacheAPI;
 
+  // Runtime abstractions
+  runtime: {
+    fs: {
+      readTextFile(path: string | URL): Promise<string>;
+      writeTextFile(path: string | URL, data: string, options?: { append?: boolean; create?: boolean }): Promise<void>;
+      readFile(path: string | URL): Promise<Uint8Array>;
+      writeFile(path: string | URL, data: Uint8Array): Promise<void>;
+      readDir(path: string | URL): AsyncIterable<{ name: string; isFile: boolean; isDirectory: boolean; isSymlink: boolean }>;
+      stat(path: string | URL): Promise<{ isFile: boolean; isDirectory: boolean; isSymlink: boolean; size: number; mtime: Date | null }>;
+      lstat(path: string | URL): Promise<{ isFile: boolean; isDirectory: boolean; isSymlink: boolean; size: number; mtime: Date | null }>;
+      remove(path: string | URL, options?: { recursive?: boolean }): Promise<void>;
+      mkdir(path: string | URL, options?: { recursive?: boolean; mode?: number }): Promise<void>;
+      makeTempDir(options?: { dir?: string; prefix?: string; suffix?: string }): Promise<string>;
+      makeTempFile(options?: { dir?: string; prefix?: string; suffix?: string }): Promise<string>;
+      isNotFoundError(error: unknown): boolean;
+      isAlreadyExistsError(error: unknown): boolean;
+      isPermissionError(error: unknown): boolean;
+    };
+  };
+
   // Built-in shader effects (fisheye, rain, bloom, etc.)
   shaderEffects: Record<string, (opts?: Record<string, unknown>) => import('./components/canvas-shader.ts').ShaderCallback>;
 

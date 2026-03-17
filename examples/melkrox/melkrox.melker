@@ -586,7 +586,7 @@ export async function handleFileSelect(event) {
   const filePath = event.path;
   if (!filePath) return;
   try {
-    const content = await Deno.readTextFile(filePath);
+    const content = await $melker.runtime.fs.readTextFile(filePath);
     $melker.getElementById('setup-prompt').props.value = content.trim();
     logger.info('Loaded story from ' + filePath + ' (' + content.length + ' chars)');
   } catch (e) {
@@ -936,7 +936,7 @@ export async function handleInput() {
         const b64 = dataUrl.replace(/^data:image\/\w+;base64,/, '');
         const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
         const tmpPath = $melker.cacheDir + '/scene.' + ext;
-        await Deno.writeFile(tmpPath, bytes);
+        await $melker.runtime.fs.writeFile(tmpPath, bytes);
         $melker.openBrowser(tmpPath);
         log(logId, 'Opened image in browser: ' + tmpPath);
       } catch (e) {
@@ -1088,8 +1088,8 @@ export async function handleInput() {
       htmlParts.push('</body></html>');
       let counter = 1;
       let storyPath = $melker.cacheDir + '/story.html';
-      try { while (await Deno.stat(storyPath)) { counter++; storyPath = $melker.cacheDir + '/story-' + counter + '.html'; } } catch { /* doesn't exist, use it */ }
-      await Deno.writeTextFile(storyPath, htmlParts.join('\n'));
+      try { while (await $melker.runtime.fs.stat(storyPath)) { counter++; storyPath = $melker.cacheDir + '/story-' + counter + '.html'; } } catch { /* doesn't exist, use it */ }
+      await $melker.runtime.fs.writeTextFile(storyPath, htmlParts.join('\n'));
       $melker.openBrowser(storyPath);
       log(logId, 'Story opened in browser (' + turnNum + ' turns)');
     } catch (e) {

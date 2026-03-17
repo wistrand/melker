@@ -1043,9 +1043,8 @@ export async function handleInput() {
       htmlParts.push('hr{border:none;border-top:1px solid #333;margin:2em 0}');
       htmlParts.push('</style></head><body>');
       htmlParts.push('<h1>' + title + '</h1>');
-      // Count assistant messages in history to compute starting turn number
-      const assistantCount = gameState.history.filter(e => e.role === 'assistant').length;
-      let turnNum = gameState.turnCount - assistantCount;
+      // Opening scene is turn 0, each subsequent turn increments
+      let turnNum = 0;
       let started = false;
       for (let i = 0; i < gameState.history.length; i++) {
         const entry = gameState.history[i];
@@ -1067,16 +1066,19 @@ export async function handleInput() {
           if (started) htmlParts.push('<div class="action">' + action + '</div>');
         }
       }
-      // Append current turn if not already in history
-      if (gameState.currentScene && turnNum < gameState.turnCount) {
-        turnNum = gameState.turnCount;
-        const imgKey = currentGameId ? 'image:' + currentGameId + ':' + turnNum : 'image:' + turnNum;
-        const cachedImg = await $melker.cache.read(CACHE_NS, imgKey);
-        htmlParts.push('<hr><h3>Turn ' + turnNum + '</h3>');
-        if (gameState.location) htmlParts.push('<div class="location">' + gameState.location + '</div>');
-        if (cachedImg) htmlParts.push('<img src="' + decoder.decode(cachedImg) + '">');
-        else if (currentImage) htmlParts.push('<img src="' + currentImage + '">');
-        htmlParts.push('<p>' + gameState.currentScene.replace(/\n/g, '</p><p>') + '</p>');
+      // Append current scene if not covered by history (e.g. mid-turn)
+      if (gameState.currentScene && turnNum <= gameState.turnCount) {
+        const lastIsAssistant = gameState.history.length > 0 && gameState.history[gameState.history.length - 1].role === 'assistant';
+        if (!lastIsAssistant) {
+          const imgKey = currentGameId ? 'image:' + currentGameId + ':' + gameState.turnCount : 'image:' + gameState.turnCount;
+          const cachedImg = await $melker.cache.read(CACHE_NS, imgKey);
+          htmlParts.push('<hr><h3>Turn ' + gameState.turnCount + '</h3>');
+          if (gameState.location) htmlParts.push('<div class="location">' + gameState.location + '</div>');
+          if (cachedImg) htmlParts.push('<img src="' + decoder.decode(cachedImg) + '">');
+          else if (currentImage) htmlParts.push('<img src="' + currentImage + '">');
+          htmlParts.push('<p>' + gameState.currentScene.replace(/\n/g, '</p><p>') + '</p>');
+          turnNum = gameState.turnCount;
+        }
       }
       htmlParts.push('</body></html>');
       let counter = 1;
@@ -1580,6 +1582,25 @@ let shaderTint = null; // cached color sample from first frame
 
 export function loadingShader(x, y, time, resolution, source, utils) {
   const pixel = source?.getPixel(x, y);
+  // Simplex noise plasma at different scales
+  const n1 = utils.simplex3d(x * 0.03, y * 0.04, time * 0.6);
+  const n2 = utils.simplex3d(x * 0.06 + 5, y * 0.08 + 5, time * 0.4);
+  const plasma = n1 * 0.6 + n2 * 0.4;
+  // Initial new game (no image yet) — standalone high-contrast plasma
+  if (!currentImage) {
+    const nx = x / resolution.width;
+    const ny = y / resolution.height;
+    const edgeX = Math.min(nx, 1 - nx) * 2;
+    const edgeY = Math.min(ny, 1 - ny) * 2;
+    const vig = edgeX * edgeY;
+    const intensity = (plasma * 0.5 + 0.5) * vig;
+    return [
+      Math.round(intensity * 100),
+      Math.round(intensity * 60),
+      Math.round(intensity * 180)
+    ];
+  }
+  // No source pixel (transparent) — dark fill
   if (!pixel) return [0, 0, 0];
   const [r, g, b] = pixel;
   // Sample representative pixels only on first frame
@@ -1596,10 +1617,6 @@ export function loadingShader(x, y, time, resolution, source, utils) {
     ];
   }
   const [avgR, avgG, avgB] = shaderTint;
-  // Simplex noise plasma at different scales
-  const n1 = utils.simplex3d(x * 0.03, y * 0.04, time * 0.6);
-  const n2 = utils.simplex3d(x * 0.06 + 5, y * 0.08 + 5, time * 0.4);
-  const plasma = n1 * 0.6 + n2 * 0.4;
   // Vignette — grows over time, fading sides to black
   const nx = x / resolution.width;
   const grow = Math.min(1, time * 0.08);
@@ -1649,11 +1666,17 @@ function updateShaderPipeline() {
   shaderPipeline[1] = activeMoods[1] && MOOD_SHADERS[activeMoods[1]] ? MOOD_SHADERS[activeMoods[1]] : null;
   // slot [2] (loading) is managed by setImageLoading
   shaderPipeline[3] = fisheyeActive ? fisheyeShaderFn : null;
+  const hasAny = shaderPipeline.some(s => s);
   const imgEl = $melker.getElementById('scene-image');
-  imgEl.stopShader();
-  imgEl.clear();
-  imgEl.refreshImage();
-  imgEl.props.onShader = shaderPipeline.some(s => s) ? shaderPipeline : undefined;
+  // Only stop/clear/refresh when removing ALL shaders. The running shader loop
+  // reads the pipeline array by reference, so slot changes take effect in-place
+  // without needing to restart. Stopping mid-animation causes visible flicker.
+  if (!hasAny) {
+    imgEl.stopShader();
+    imgEl.clear();
+    imgEl.refreshImage();
+  }
+  imgEl.props.onShader = hasAny ? shaderPipeline : undefined;
   imgEl.props.shaderFps = fisheyeActive ? 24 : shaderPipeline[2] ? 10 : 12;
 }
 
@@ -1745,8 +1768,8 @@ async function generateSceneImage(logId, customStyle) {
       return;
     }
 
-    log(logId, 'Generating scene image via ' + imageModel + '...');
     setSpinner('game-spinner', true, 'painting scene');
+    log(logId, 'Generating scene image via ' + imageModel + '...');
 
     imageAbort = new AbortController();
     const t0 = Date.now();
@@ -2299,9 +2322,9 @@ function showScreen(id) {
   for (const spinnerId of ['loading-spinner', 'setup-spinner', 'game-spinner']) {
     $melker.getElementById(spinnerId).stop();
   }
-  setImageLoading(false);
-  // Clear scene image to prevent old image flicker on next game screen show
+  // Clear scene image and loading shader when leaving game screen
   if (id !== 'game-screen') {
+    setImageLoading(false);
     $melker.getElementById('scene-image').setSrc(PLACEHOLDER_IMG);
   }
 }
@@ -2336,7 +2359,7 @@ function renderScene() {
     lastRenderedImage = null;
   }
 
-  $melker.getElementById('narrative').props.text = gameState.currentScene || '*Waiting...*';
+  $melker.getElementById('narrative').props.text = gameState.currentScene || '*Loading...*';
 
   const inv = gameState.inventory.length > 0 ? gameState.inventory.join(', ') : 'empty';
   $melker.getElementById('status-bar').props.text =

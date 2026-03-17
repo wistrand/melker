@@ -147,7 +147,11 @@ So constructed.
 
 **Mar 10** - Data visualization doc page, AI doc page, doc examples ← `v2026.03.7`
 
-**Mar 11** - I18n subsystem (`<messages>`, `@key` sigils, locale switching), sub-byte PNG decode fix, tile map disk cache resilience, tab border gap fix, tooltip content debounce
+**Mar 11** - I18n subsystem (`<messages>`, `@key` sigils, locale switching), sub-byte PNG decode fix, tile map disk cache resilience, tab border gap fix, tooltip content debounce ← `v2026.03.8`
+
+**Mar 12-15** - Shader effects library, AI streaming module, dialog base class, canvas rendering fixes, melkrox game example ← `v2026.03.9`
+
+**Mar 15** - Policy path variables (`$configDir`, `$cacheDir`, etc.), `--show-policy` resolved path display ← `v2026.03.10`
 
 ## Components
 
@@ -200,4 +204,7 @@ CalVer format: `YYYY.MM.PATCH`. Releases are git tags only.
 | `v2026.03.4` | Mar 6  | Engine cache improvements                            |
 | `v2026.03.5` | Mar 7  | SVG overlay module, chroma-key filter, OkLab color   |
 | `v2026.03.6` | Mar 7  | CLI Node.js flag fixes                               |
-| `v2026.03.7` | Mar 10 | DevTools overhaul, data-viz docs, AI doc page         |
+| `v2026.03.7` | Mar 10 | DevTools overhaul, data-viz docs, AI doc page          |
+| `v2026.03.8` | Mar 11 | I18n subsystem, tile map fixes, tooltip debounce       |
+| `v2026.03.9` | Mar 15 | Shader effects, AI streaming, dialog, canvas fixes     |
+| `v2026.03.10`| Mar 15 | Policy path variables, --show-policy display           |

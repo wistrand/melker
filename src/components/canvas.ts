@@ -1483,6 +1483,8 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
    * Get shader context for runner functions
    */
   private _getShaderContext(): ShaderContext {
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
+    const self = this;
     return {
       colorBuffer: this._colorBuffer,
       imageColorBuffer: this._imageColorBuffer,
@@ -1497,7 +1499,7 @@ export class CanvasElement extends Element implements Renderable, Focusable, Int
       setLoadedImage: (img: LoadedImage) => { this._loadedImage = img; },
       previousColorBuffer: this._previousColorBuffer,
       invalidateDitherCache: () => { this._ditherState.invalidate(); },
-      loadedImage: this._loadedImage,
+      get loadedImage() { return self._loadedImage; },
       hasPaintHandler: !!this.props.onPaint,
     };
   }

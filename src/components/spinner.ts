@@ -216,10 +216,13 @@ export class SpinnerElement extends Element implements Renderable {
     // Get current frame (space if not spinning)
     const frame = spinning ? this._getCurrentFrame() : ' ';
 
+    // When shade is active, tint spinner char to match the dim shade level
+    const spinnerStyle = (shade && spinning) ? { ...style, foreground: this._shadeDimColor(style) } : style;
+
     // Use setCell for spinner char to force single-cell width (avoids wide char issues)
     if (textPosition === 'left') {
       // Spinner first, then text
-      buffer.currentBuffer.setCell(bounds.x, bounds.y, { char: frame, width: 1, ...style });
+      buffer.currentBuffer.setCell(bounds.x, bounds.y, { char: frame, width: 1, ...spinnerStyle });
       if (text && bounds.width > 2) {
         const maxLen = bounds.width - 2;
         const displayText = text.slice(0, maxLen);
@@ -240,12 +243,24 @@ export class SpinnerElement extends Element implements Renderable {
           buffer.currentBuffer.setText(bounds.x, bounds.y, displayText, style);
         }
         if (bounds.width > displayText.length + 1) {
-          buffer.currentBuffer.setCell(bounds.x + displayText.length + 1, bounds.y, { char: frame, width: 1, ...style });
+          buffer.currentBuffer.setCell(bounds.x + displayText.length + 1, bounds.y, { char: frame, width: 1, ...spinnerStyle });
         }
       } else {
-        buffer.currentBuffer.setCell(bounds.x, bounds.y, { char: frame, width: 1, ...style });
+        buffer.currentBuffer.setCell(bounds.x, bounds.y, { char: frame, width: 1, ...spinnerStyle });
       }
     }
+  }
+
+  /**
+   * Get the dim shade color (matches the minimum brightness of the shade wave).
+   */
+  private _shadeDimColor(style: Partial<Cell>): number {
+    const baseFg = style.foreground ?? 0xFFFFFFFF;
+    const r = Math.round(((baseFg >> 24) & 0xFF) * 0.5);
+    const g = Math.round(((baseFg >> 16) & 0xFF) * 0.5);
+    const b = Math.round(((baseFg >> 8) & 0xFF) * 0.5);
+    const a = baseFg & 0xFF;
+    return ((r << 24) | (g << 16) | (b << 8) | a) >>> 0;
   }
 
   /**

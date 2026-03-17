@@ -100,8 +100,8 @@ export interface ShaderContext {
   previousColorBuffer: Uint32Array;
   invalidateDitherCache: () => void;
 
-  // Original source image (full resolution)
-  loadedImage: LoadedImage | null;
+  // Original source image (full resolution) — getter for live access
+  readonly loadedImage: LoadedImage | null;
 
   // When true, shader runs synchronously during render() as post-processing over onPaint
   hasPaintHandler?: boolean;

@@ -252,9 +252,15 @@ export class ContainerElement extends Element implements Renderable, Focusable, 
     // (intrinsicSize returns content size only, layout adds padding + border for outer size)
     // Child borders are added above because we need to know total space children will occupy
 
+    // For flex-wrap row layouts, cap width to available space (content wraps, not overflows)
+    let resultWidth = totalWidth;
+    if (isFlexRow && isWrap && context.availableSpace.width > 0) {
+      resultWidth = Math.min(totalWidth, context.availableSpace.width);
+    }
+
     return {
       // Use explicit dimension if set, otherwise use calculated child size
-      width: explicitWidth ?? totalWidth,
+      width: explicitWidth ?? resultWidth,
       height: explicitHeight ?? totalHeight,
     };
   }

@@ -147,8 +147,8 @@
 <!-- Loading screen -->
 <container id="loading-screen" style="padding: 2; gap: 1;">
   <text style="font-weight: bold; text-align: center;">MELKROX</text>
-  <spinner id="loading-spinner" variant="braille" verbs="loading" shade="true" />
-  <container id="loading-log" style="padding-top: 1; max-height: 6; overflow: scroll;"></container>
+  <spinner id="loading-spinner" variant="arc" verbs="loading" shade="true" />
+  <container id="loading-log" style="padding-top: 1; max-height: 6; overflow-y: auto; overflow-x: none"></container>
 </container>
 
 <!-- Game select screen -->
@@ -195,7 +195,7 @@
     </container>
     <text id="setup-error" style="display: none;"></text>
     <container id="setup-progress" style="height: 8; align-items: center; gap: 1; padding-top: 1;">
-      <spinner id="setup-spinner" variant="braille" verbs="Creating world" spinning="false" shade="true" style="visibility: hidden;" />
+      <spinner id="setup-spinner" variant="arc" verbs="Creating world" spinning="false" shade="true" style="visibility: hidden;" />
       <container id="setup-log" style="display: none; max-height: 6; overflow: scroll; width: 100%; color: var(--theme-text-muted);"></container>
     </container>
   </container>
@@ -817,7 +817,9 @@ export async function handleInput() {
     }
     const newId = generateGameId();
     const forkedState = JSON.parse(JSON.stringify(gameState));
-    forkedState.worldConfig.title = forkedState.worldConfig.title + ' (fork)';
+    const baseTitle = forkedState.worldConfig.title.replace(/ \(fork(?: \d+)?\)$/, '');
+    const forkCount = gamesIndex.filter(g => g.title === baseTitle || g.title.startsWith(baseTitle + ' (fork')).length;
+    forkedState.worldConfig.title = baseTitle + ' (fork ' + forkCount + ')';
     // Save forked game state
     await $melker.cache.write(CACHE_NS, 'game:' + newId, encoder.encode(JSON.stringify(forkedState)));
     // Copy current image to forked game
@@ -2389,6 +2391,7 @@ function renderScene() {
   if (!gameState) return;
 
   const title = gameState.worldConfig?.title || 'MELKROX';
+  $melker.setTitle('MELKROX - ' + title);
   $melker.getElementById('title-bar').props.text =
     'MELKROX - ' + title + '    Turn: ' + gameState.turnCount;
 

@@ -228,19 +228,25 @@ export class MarkdownCodeRenderer {
       let hasExplicitHeight = false;
 
       const style = element.props.style as Record<string, unknown> | undefined;
-      if (element.props.width && typeof element.props.width === 'number') {
-        elementWidth = Math.min(element.props.width, ctx.bounds.width);
-        hasExplicitWidth = true;
-      } else if (style?.width && typeof style.width === 'number') {
-        elementWidth = Math.min(style.width as number, ctx.bounds.width);
+      const rawWidth = element.props.width ?? style?.width;
+      const rawHeight = element.props.height ?? style?.height;
+
+      if (rawWidth !== undefined) {
+        if (rawWidth === 'fill') {
+          elementWidth = ctx.bounds.width;
+        } else if (typeof rawWidth === 'number') {
+          elementWidth = Math.min(rawWidth, ctx.bounds.width);
+        } else if (typeof rawWidth === 'string' && rawWidth.endsWith('%')) {
+          const pct = parseFloat(rawWidth) / 100;
+          elementWidth = Math.round(ctx.bounds.width * pct);
+        }
         hasExplicitWidth = true;
       }
-      if (element.props.height && typeof element.props.height === 'number') {
-        elementHeight = element.props.height;
-        hasExplicitHeight = true;
-      } else if (style?.height && typeof style.height === 'number') {
-        elementHeight = style.height as number;
-        hasExplicitHeight = true;
+      if (rawHeight !== undefined) {
+        if (typeof rawHeight === 'number') {
+          elementHeight = rawHeight;
+          hasExplicitHeight = true;
+        }
       }
 
       // Only use intrinsicSize as fallback when no explicit dimensions were set

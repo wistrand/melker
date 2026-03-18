@@ -195,18 +195,16 @@ export function calculateOutputDimensions(
 
   // Height should be multiple of 3 for sextant character alignment
   outputH = Math.floor(outputH / 3) * 3;
-  outputH = Math.max(48, outputH);
 
   // Ensure output never equals or exceeds buffer dimensions
   if (outputW >= bufferWidth) outputW = ((bufferWidth - 1) >> 4) << 4;
   if (outputH >= bufferHeight) {
     outputH = Math.floor((bufferHeight - 1) / 3) * 3;
-    outputH = Math.floor(outputH / 16) * 16;
   }
 
   // Safety minimum
   outputW = Math.max(16, outputW);
-  outputH = Math.max(48, outputH);
+  outputH = Math.max(3, outputH);
 
   return { width: outputW, height: outputH };
 }

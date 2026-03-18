@@ -1020,9 +1020,10 @@ export class DataTableElement extends Element implements Renderable, Focusable, 
           this._lastClickTime = 0;
           this._lastClickSortedPos = -1;
         } else {
-          // Single click: select the row (if selectable)
+          // Always update focus to clicked row
+          this._focusedSortedIndex = sortedPos;
+          // Select the row (if selectable)
           if (selectable !== 'none') {
-            this._focusedSortedIndex = sortedPos;
             this.selectRowAtPosition(sortedPos, selectable === 'single' ? 'replace' : 'toggle');
           }
           // Track for potential double-click

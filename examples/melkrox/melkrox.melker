@@ -229,6 +229,7 @@
 - `/gfx [mode]` — Set gfx mode (sextant/halfblock/quadrant/pattern/luma/reset)
 - `/dither [bits]` — Set dither bits (1/2/4/8/reset)
 - `/mood [effect] [effect]` — Set mood shader(s), up to 2 layered (lightning/rain/bloom/sunrays/glitch/fog/fire/underwater/snow/darkness/sandstorm/magic/heat/off)
+- `/fork` — Fork current game to a new save (same world, same history)
 - `/cost [on|off]` — Toggle session token/cost display
 - `/help` — Show this help" />
   </container>
@@ -809,6 +810,48 @@ export async function handleInput() {
   const logId = 'log-area';
 
   // Local commands
+  if (cmd === '/fork') {
+    if (!gameState || !currentGameId) {
+      $melker.toast.show('No active game to fork', { type: 'warning' });
+      return;
+    }
+    const newId = generateGameId();
+    const forkedState = JSON.parse(JSON.stringify(gameState));
+    forkedState.worldConfig.title = forkedState.worldConfig.title + ' (fork)';
+    // Save forked game state
+    await $melker.cache.write(CACHE_NS, 'game:' + newId, encoder.encode(JSON.stringify(forkedState)));
+    // Copy current image to forked game
+    if (currentImage) {
+      await $melker.cache.write(CACHE_NS, 'image:' + newId + ':' + forkedState.turnCount, encoder.encode(currentImage));
+    }
+    // Copy all cached images from source game
+    const allKeys = await $melker.cache.scan(CACHE_NS);
+    const prefix = 'image:' + currentGameId + ':';
+    for (const k of allKeys) {
+      if (k.startsWith(prefix)) {
+        const turn = k.slice(prefix.length);
+        const imgData = await $melker.cache.read(CACHE_NS, k);
+        if (imgData) await $melker.cache.write(CACHE_NS, 'image:' + newId + ':' + turn, imgData);
+      }
+    }
+    // Add to index
+    gamesIndex.push({
+      id: newId,
+      title: forkedState.worldConfig.title,
+      turnCount: forkedState.turnCount,
+      location: forkedState.location,
+      lastPlayed: new Date().toISOString()
+    });
+    await saveGamesIndex();
+    // Switch to the forked game
+    currentGameId = newId;
+    gameState = forkedState;
+    redoStack.length = 0;
+    renderScene();
+    $melker.toast.show('Forked game: ' + forkedState.worldConfig.title);
+    log(logId, 'Game forked as "' + forkedState.worldConfig.title + '"');
+    return;
+  }
   if (cmd === '/new') {
     gameState = null;
     currentGameId = null;
@@ -1181,7 +1224,7 @@ export async function handleInput() {
 
   // Unknown / commands — ask LLM for correction
   if (cmd.startsWith('/')) {
-    const knownCmds = '/new /games /undo /redo /state /story /image /reimage /images /gfx /dither /history /help /style /restyle /cost';
+    const knownCmds = '/new /games /fork /undo /redo /state /story /image /reimage /images /gfx /dither /history /help /style /restyle /cost';
     setSpinner('game-spinner', true, 'checking command');
     try {
       const correction = await callOpenRouter(
@@ -2455,7 +2498,7 @@ $melker.registerAITool({
       characters: (wc.characters || []).map(c => ({ name: c.name, description: c.description })),
       protagonist: wc.protagonist ? { name: wc.protagonist.name } : null,
       threads: wc.threads,
-      commands: '/new, /games, /undo, /redo, /state, /story, /image, /reimage [style], /images, /gfx [mode], /dither [bits], /history, /help',
+      commands: '/new, /games, /fork, /undo, /redo, /state, /story, /image, /reimage [style], /images, /gfx [mode], /dither [bits], /history, /help',
     };
   }
 });

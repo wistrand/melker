@@ -1,0 +1,550 @@
+<melker>
+  <policy>{"permissions": {"read": ["*"]}}</policy>
+
+  <help>
+Gaussian Splat Viewer - renders .splat files in the terminal.
+
+Usage: melker.ts gaussian-splat.melker &lt;file.splat&gt;
+
+Controls:
+  Mouse drag (left)    Orbit camera
+  Mouse drag (right)   Pan camera
+  Scroll wheel         Zoom in/out
+  Arrow keys           Rotate view
+  +/-                  Zoom in/out
+  r                    Reset camera
+  </help>
+
+  <container style="width: fill; height: fill; display: flex; flex-direction: column;">
+    <canvas id="view" width="fill" height="fill" dither="auto"
+      onMouseDown="$app.onMouseDown(event)"
+      onMouseMove="$app.onMouseMove(event)"
+      onMouseUp="$app.onMouseUp(event)"
+      onWheel="$app.onWheel(event)"
+      onKeyPress="$app.onKeyPress(event)" />
+    <text id="status">Loading...</text>
+  </container>
+
+  <script type="typescript">
+    // ── SoA splat data (flat typed arrays for cache-friendly access) ──
+    let splatCount = 0;
+    // Position
+    let posX: Float32Array;
+    let posY: Float32Array;
+    let posZ: Float32Array;
+    // Pre-computed 3D covariance (6 unique values of symmetric 3x3)
+    let cov3D_00: Float32Array;
+    let cov3D_01: Float32Array;
+    let cov3D_02: Float32Array;
+    let cov3D_11: Float32Array;
+    let cov3D_12: Float32Array;
+    let cov3D_22: Float32Array;
+    // Color (pre-scaled to 0-255)
+    let colR: Uint8Array;
+    let colG: Uint8Array;
+    let colB: Uint8Array;
+    let colA: Uint8Array; // 0-255
+
+    // ── Camera state ──
+    let camTheta = 0.5;
+    let camPhi = 0.4;
+    let camDist = 5.0;
+    let targetX = 0, targetY = 0, targetZ = 0;
+    let dragging = false;
+    let lastMouseX = 0, lastMouseY = 0;
+    let dragButton = 0;
+    let renderPending = false;
+    let refineTimer: number | null = null;
+    const PREVIEW_SPLATS = 300000;
+
+    // ── Pre-allocated frame buffers (resized on demand) ──
+    let fbW = 0, fbH = 0;
+    let fbPixels: Uint8Array;
+    let fbAlpha: Float32Array;
+    // Per-splat projection buffers
+    let projDepth: Float32Array;
+    let projSX: Float32Array;
+    let projSY: Float32Array;
+    let projIA: Float32Array;
+    let projIB: Float32Array;
+    let projIC: Float32Array;
+    let projVis: Uint8Array;
+    let sortBucket: Uint16Array;
+    let sortCounts: Uint32Array;
+
+    function allocProjectionBuffers(n: number) {
+      if (projDepth && projDepth.length >= n) return;
+      projDepth = new Float32Array(n);
+      projSX = new Float32Array(n);
+      projSY = new Float32Array(n);
+      projIA = new Float32Array(n);
+      projIB = new Float32Array(n);
+      projIC = new Float32Array(n);
+      projVis = new Uint8Array(n);
+      sortBucket = new Uint16Array(n);
+    }
+
+    function allocFrameBuffer(w: number, h: number) {
+      if (fbW === w && fbH === h) return;
+      fbW = w; fbH = h;
+      fbPixels = new Uint8Array(w * h * 4);
+      fbAlpha = new Float32Array(w * h);
+    }
+
+    // ── Parse .splat file into SoA with pre-computed covariance ──
+    export function parseSplatFile(buffer: ArrayBuffer): number {
+      const count = Math.floor(buffer.byteLength / 32);
+      const f32 = new Float32Array(buffer);
+      const u8 = new Uint8Array(buffer);
+
+      splatCount = count;
+      posX = new Float32Array(count);
+      posY = new Float32Array(count);
+      posZ = new Float32Array(count);
+      cov3D_00 = new Float32Array(count);
+      cov3D_01 = new Float32Array(count);
+      cov3D_02 = new Float32Array(count);
+      cov3D_11 = new Float32Array(count);
+      cov3D_12 = new Float32Array(count);
+      cov3D_22 = new Float32Array(count);
+      colR = new Uint8Array(count);
+      colG = new Uint8Array(count);
+      colB = new Uint8Array(count);
+      colA = new Uint8Array(count);
+
+      for (let i = 0; i < count; i++) {
+        const fo = i * 8;
+        const bo = i * 32;
+
+        posX[i] = f32[fo];
+        posY[i] = f32[fo + 1];
+        posZ[i] = f32[fo + 2];
+
+        const sx = f32[fo + 3];
+        const sy = f32[fo + 4];
+        const sz = f32[fo + 5];
+
+        colR[i] = u8[bo + 24];
+        colG[i] = u8[bo + 25];
+        colB[i] = u8[bo + 26];
+        colA[i] = u8[bo + 27];
+
+        // Decode + normalize quaternion
+        let qw = (u8[bo + 28] - 128) / 128;
+        let qx = (u8[bo + 29] - 128) / 128;
+        let qy = (u8[bo + 30] - 128) / 128;
+        let qz = (u8[bo + 31] - 128) / 128;
+        const qlen = Math.sqrt(qw * qw + qx * qx + qy * qy + qz * qz) || 1;
+        qw /= qlen; qx /= qlen; qy /= qlen; qz /= qlen;
+
+        // Inline quaternion to rotation matrix
+        const xx = qx * qx, yy = qy * qy, zz = qz * qz;
+        const xy = qx * qy, xz = qx * qz, yz = qy * qz;
+        const wx = qw * qx, wy = qw * qy, wz = qw * qz;
+        const r00 = 1 - 2 * (yy + zz), r01 = 2 * (xy + wz), r02 = 2 * (xz - wy);
+        const r10 = 2 * (xy - wz), r11 = 1 - 2 * (xx + zz), r12 = 2 * (yz + wx);
+        const r20 = 2 * (xz + wy), r21 = 2 * (yz - wx), r22 = 1 - 2 * (xx + yy);
+
+        // M = R * diag(scale), Sigma3D = M * M^T (pre-computed, view-independent)
+        const m00 = r00 * sx, m01 = r01 * sy, m02 = r02 * sz;
+        const m10 = r10 * sx, m11 = r11 * sy, m12 = r12 * sz;
+        const m20 = r20 * sx, m21 = r21 * sy, m22 = r22 * sz;
+
+        cov3D_00[i] = m00 * m00 + m01 * m01 + m02 * m02;
+        cov3D_01[i] = m00 * m10 + m01 * m11 + m02 * m12;
+        cov3D_02[i] = m00 * m20 + m01 * m21 + m02 * m22;
+        cov3D_11[i] = m10 * m10 + m11 * m11 + m12 * m12;
+        cov3D_12[i] = m10 * m20 + m11 * m21 + m12 * m22;
+        cov3D_22[i] = m20 * m20 + m21 * m21 + m22 * m22;
+      }
+
+      allocProjectionBuffers(count);
+      sortCounts = new Uint32Array(65536);
+      return count;
+    }
+
+    // ── View matrix ──
+    function lookAt(eyeX: number, eyeY: number, eyeZ: number,
+                    atX: number, atY: number, atZ: number): Float64Array {
+      let fx = atX - eyeX, fy = atY - eyeY, fz = atZ - eyeZ;
+      let fl = Math.sqrt(fx * fx + fy * fy + fz * fz) || 1;
+      fx /= fl; fy /= fl; fz /= fl;
+      let ux = 0, uy = 1, uz = 0;
+      let rx = fy * uz - fz * uy;
+      let ry = fz * ux - fx * uz;
+      let rz = fx * uy - fy * ux;
+      let rl = Math.sqrt(rx * rx + ry * ry + rz * rz) || 1;
+      rx /= rl; ry /= rl; rz /= rl;
+      ux = ry * fz - rz * fy;
+      uy = rz * fx - rx * fz;
+      uz = rx * fy - ry * fx;
+      const m = new Float64Array(16);
+      m[0] = rx;  m[1] = ry;  m[2] = rz;  m[3] = -(rx * eyeX + ry * eyeY + rz * eyeZ);
+      m[4] = ux;  m[5] = uy;  m[6] = uz;  m[7] = -(ux * eyeX + uy * eyeY + uz * eyeZ);
+      m[8] = fx;  m[9] = fy;  m[10] = fz; m[11] = -(fx * eyeX + fy * eyeY + fz * eyeZ);
+      m[12] = 0;  m[13] = 0;  m[14] = 0;  m[15] = 1;
+      return m;
+    }
+
+    // ── Render ──
+    export function renderSplats(maxSplats?: number) {
+      const canvas = $melker.getElementById('view');
+      if (!canvas || splatCount === 0) return;
+      const n = splatCount;
+      const stride = maxSplats && maxSplats < n ? Math.ceil(n / maxSplats) : 1;
+
+      const t0 = performance.now();
+      const { width: bufW, height: bufH } = canvas.getBufferSize();
+      if (bufW < 4 || bufH < 4) return;
+
+      allocFrameBuffer(bufW, bufH);
+      fbPixels.fill(0);
+      fbAlpha.fill(0);
+
+      // Camera
+      const eyeX = targetX + camDist * Math.cos(camPhi) * Math.sin(camTheta);
+      const eyeY = targetY + camDist * Math.sin(camPhi);
+      const eyeZ = targetZ + camDist * Math.cos(camPhi) * Math.cos(camTheta);
+      const view = lookAt(eyeX, eyeY, eyeZ, targetX, targetY, targetZ);
+
+      const aspect = canvas.getPixelAspectRatio();
+      const fov = 0.9;
+      const fx = bufW / (2 * Math.tan(fov / 2));
+      const fy = fx * aspect;
+      const cx = bufW / 2;
+      const cy = bufH / 2;
+
+      // Extract view rotation (constant per frame)
+      const w00 = view[0], w01 = view[1], w02 = view[2];
+      const w10 = view[4], w11 = view[5], w12 = view[6];
+      const w20 = view[8], w21 = view[9], w22 = view[10];
+
+      // ── Phase 1: Transform + project ──
+      projVis.fill(0);
+      let visCount = 0;
+      const margin = 50; // screen-space margin for frustum cull
+
+      for (let i = 0; i < n; i += stride) {
+        if (colA[i] < 3) continue; // skip near-transparent
+
+        // Transform to camera space
+        const px = posX[i], py = posY[i], pz = posZ[i];
+        const tx = view[0] * px + view[1] * py + view[2] * pz + view[3];
+        const ty = view[4] * px + view[5] * py + view[6] * pz + view[7];
+        const tz = view[8] * px + view[9] * py + view[10] * pz + view[11];
+
+        if (tz < 0.2) continue;
+
+        // Project to screen
+        const sx = fx * tx / tz + cx;
+        const sy = fy * ty / tz + cy;
+
+        // Frustum cull
+        if (sx < -margin || sx > bufW + margin || sy < -margin || sy > bufH + margin) continue;
+
+        projDepth[i] = tz;
+        projSX[i] = sx;
+        projSY[i] = sy;
+
+        // 2D covariance from pre-computed 3D covariance
+        // Sigma_cam = W * Sigma3D * W^T, then project with Jacobian
+        const s00 = cov3D_00[i], s01 = cov3D_01[i], s02 = cov3D_02[i];
+        const s11 = cov3D_11[i], s12 = cov3D_12[i], s22 = cov3D_22[i];
+
+        // T = W * Sigma3D
+        const t00 = w00 * s00 + w01 * s01 + w02 * s02;
+        const t01 = w00 * s01 + w01 * s11 + w02 * s12;
+        const t02 = w00 * s02 + w01 * s12 + w02 * s22;
+        const t10 = w10 * s00 + w11 * s01 + w12 * s02;
+        const t11 = w10 * s01 + w11 * s11 + w12 * s12;
+        const t12 = w10 * s02 + w11 * s12 + w12 * s22;
+        const t20 = w20 * s00 + w21 * s01 + w22 * s02;
+        const t21 = w20 * s01 + w21 * s11 + w22 * s12;
+        const t22 = w20 * s02 + w21 * s12 + w22 * s22;
+
+        // Sigma_cam = T * W^T (only need c00,c01,c02,c11,c12,c22)
+        const c00 = t00 * w00 + t01 * w01 + t02 * w02;
+        const c01 = t00 * w10 + t01 * w11 + t02 * w12;
+        const c02 = t00 * w20 + t01 * w21 + t02 * w22;
+        const c11 = t10 * w10 + t11 * w11 + t12 * w12;
+        const c12 = t10 * w20 + t11 * w21 + t12 * w22;
+        const c22 = t20 * w20 + t21 * w21 + t22 * w22;
+
+        // Perspective Jacobian
+        const tz2 = tz * tz;
+        const j00 = fx / tz, j02 = -fx * tx / tz2;
+        const j11 = fy / tz, j12 = -fy * ty / tz2;
+
+        // J * Sigma_cam * J^T (2x2)
+        const js00 = j00 * c00 + j02 * c02;
+        const js01 = j00 * c01 + j02 * c12;
+        const js02 = j00 * c02 + j02 * c22;
+        const js11 = j11 * c11 + j12 * c12;
+        const js12 = j11 * c12 + j12 * c22;
+
+        let cov_a = js00 * j00 + js02 * j02 + 0.3;
+        const cov_b = js01 * j11 + js02 * j12;
+        let cov_c = js11 * j11 + js12 * j12 + 0.3;
+
+        // Invert 2x2
+        const det = cov_a * cov_c - cov_b * cov_b;
+        if (det <= 0) continue;
+        const invDet = 1.0 / det;
+
+        projIA[i] = cov_c * invDet;
+        projIB[i] = -cov_b * invDet;
+        projIC[i] = cov_a * invDet;
+        projVis[i] = 1;
+        visCount++;
+      }
+
+      // ── Phase 2: Counting sort by depth ──
+      let minDepth = Infinity, maxDepth = -Infinity;
+      for (let i = 0; i < n; i += stride) {
+        if (!projVis[i]) continue;
+        const d = projDepth[i];
+        if (d < minDepth) minDepth = d;
+        if (d > maxDepth) maxDepth = d;
+      }
+
+      const BUCKETS = 65536;
+      const depthRange = maxDepth - minDepth || 1;
+      const invRange = (BUCKETS - 1) / depthRange;
+      sortCounts.fill(0);
+
+      for (let i = 0; i < n; i += stride) {
+        if (!projVis[i]) continue;
+        const b = Math.min(BUCKETS - 1, ((projDepth[i] - minDepth) * invRange) | 0);
+        sortBucket[i] = b;
+        sortCounts[b]++;
+      }
+      for (let i = 1; i < BUCKETS; i++) sortCounts[i] += sortCounts[i - 1];
+
+      const sorted = new Uint32Array(visCount);
+      for (let i = n - 1; i >= 0; i -= stride) {
+        if (i < 0) break;
+        if (!projVis[i]) continue;
+        sorted[--sortCounts[sortBucket[i]]] = i;
+      }
+
+      // ── Phase 3: Rasterize front-to-back ──
+      const pixels = fbPixels;
+      const alphaAccum = fbAlpha;
+
+      for (let si = 0; si < visCount; si++) {
+        const i = sorted[si];
+        const scx = projSX[i];
+        const scy = projSY[i];
+        const ia = projIA[i], ib = projIB[i], ic = projIC[i];
+
+        // Bounding radius from eigenvalues of inverse covariance
+        const mid = 0.5 * (ia + ic);
+        const diff = ia - ic;
+        const minEig = Math.max(mid - Math.sqrt(0.25 * diff * diff + ib * ib), 0.0001);
+        const radius = Math.ceil(3.0 / Math.sqrt(minEig));
+
+        if (radius > 50) continue;
+
+        const x0 = Math.max(0, (scx - radius) | 0);
+        const x1 = Math.min(bufW - 1, (scx + radius + 1) | 0);
+        const y0 = Math.max(0, (scy - radius) | 0);
+        const y1 = Math.min(bufH - 1, (scy + radius + 1) | 0);
+
+        if (x0 > x1 || y0 > y1) continue;
+
+        const sr = colR[i];
+        const sg = colG[i];
+        const sb = colB[i];
+        const opacity = colA[i] / 255;
+
+        for (let py = y0; py <= y1; py++) {
+          const dy = py - scy;
+          const rowOff = py * bufW;
+          // Pre-compute row-dependent terms
+          const ibdy = ib * dy;
+          const icdy2 = ic * dy * dy;
+          for (let px = x0; px <= x1; px++) {
+            const dx = px - scx;
+            const power = -0.5 * (ia * dx * dx + 2 * ibdy * dx + icdy2);
+            if (power < -4.0) continue;
+
+            const alpha = opacity * Math.exp(power);
+            if (alpha < 0.004) continue;
+
+            const pidx = rowOff + px;
+            const aa = alphaAccum[pidx];
+            if (aa >= 0.999) continue;
+
+            const w = alpha * (1 - aa);
+            const off = pidx * 4;
+            pixels[off] += w * sr;
+            pixels[off + 1] += w * sg;
+            pixels[off + 2] += w * sb;
+            pixels[off + 3] = Math.min(255, pixels[off + 3] + w * 255);
+            alphaAccum[pidx] = aa + w;
+          }
+        }
+      }
+
+      // ── Write to canvas ──
+      canvas.clear();
+      for (let y = 0; y < bufH; y++) {
+        for (let x = 0; x < bufW; x++) {
+          const off = (y * bufW + x) * 4;
+          if (pixels[off + 3] < 2) continue;
+          const r = pixels[off] > 255 ? 255 : pixels[off];
+          const g = pixels[off + 1] > 255 ? 255 : pixels[off + 1];
+          const b = pixels[off + 2] > 255 ? 255 : pixels[off + 2];
+          canvas.setPixelColor(x, y, (r << 24 | g << 16 | b << 8 | 0xFF) >>> 0);
+        }
+      }
+      canvas.markDirty();
+
+      const dt = performance.now() - t0;
+      const status = $melker.getElementById('status');
+      if (status) {
+        const mode = stride > 1 ? ` [1/${stride}]` : '';
+        status.props.text = `${splatCount} splats (${visCount} visible${mode}) | ${dt.toFixed(0)}ms | d=${camDist.toFixed(1)}`;
+      }
+    }
+
+    // ── Throttled render ──
+    function scheduleRender() {
+      if (refineTimer !== null) { clearTimeout(refineTimer); refineTimer = null; }
+      if (renderPending) return;
+      renderPending = true;
+      setTimeout(() => {
+        renderPending = false;
+        renderSplats(PREVIEW_SPLATS);
+        $melker.render();
+        refineTimer = setTimeout(() => {
+          refineTimer = null;
+          renderSplats();
+          $melker.render();
+        }, 300) as unknown as number;
+      }, 0);
+    }
+
+    // ── Mouse controls ──
+    export function onMouseDown(event: { x: number; y: number; button: number }) {
+      dragging = true;
+      lastMouseX = event.x;
+      lastMouseY = event.y;
+      dragButton = event.button;
+      $melker.skipRender();
+    }
+
+    export function onMouseMove(event: { x: number; y: number }) {
+      if (!dragging) { $melker.skipRender(); return; }
+      const dx = event.x - lastMouseX;
+      const dy = event.y - lastMouseY;
+      lastMouseX = event.x;
+      lastMouseY = event.y;
+
+      if (dragButton === 0) {
+        camTheta -= dx * 0.03;
+        camPhi -= dy * 0.03;
+        camPhi = Math.max(-Math.PI / 2 + 0.01, Math.min(Math.PI / 2 - 0.01, camPhi));
+      } else {
+        const panScale = camDist * 0.005;
+        const cosT = Math.cos(camTheta), sinT = Math.sin(camTheta);
+        targetX -= dx * panScale * cosT;
+        targetZ += dx * panScale * sinT;
+        targetY += dy * panScale;
+      }
+      scheduleRender();
+      $melker.skipRender();
+    }
+
+    export function onMouseUp(_event: any) {
+      dragging = false;
+      $melker.skipRender();
+    }
+
+    export function onWheel(event: { deltaY: number }) {
+      camDist *= event.deltaY > 0 ? 1.1 : 0.9;
+      camDist = Math.max(0.5, Math.min(50, camDist));
+      scheduleRender();
+      $melker.skipRender();
+    }
+
+    export function onKeyPress(event: { key: string }) {
+      const step = 0.1;
+      switch (event.key) {
+        case 'ArrowLeft':  camTheta -= step; break;
+        case 'ArrowRight': camTheta += step; break;
+        case 'ArrowUp':    camPhi += step; break;
+        case 'ArrowDown':  camPhi -= step; break;
+        case '+': case '=': camDist *= 0.85; break;
+        case '-':            camDist *= 1.15; break;
+        case 'r':
+          camTheta = 0.5; camPhi = 0.4; camDist = 5.0;
+          targetX = 0; targetY = 0; targetZ = 0;
+          break;
+        default: $melker.skipRender(); return;
+      }
+      camDist = Math.max(0.5, Math.min(50, camDist));
+      camPhi = Math.max(-Math.PI / 2 + 0.01, Math.min(Math.PI / 2 - 0.01, camPhi));
+      scheduleRender();
+      $melker.skipRender();
+    }
+
+    // ── Auto-center ──
+    export function autoCenter() {
+      if (splatCount === 0) return;
+      let mx = 0, my = 0, mz = 0;
+      for (let i = 0; i < splatCount; i++) { mx += posX[i]; my += posY[i]; mz += posZ[i]; }
+      targetX = mx / splatCount;
+      targetY = my / splatCount;
+      targetZ = mz / splatCount;
+      let maxR2 = 0;
+      for (let i = 0; i < splatCount; i++) {
+        const dx = posX[i] - targetX, dy = posY[i] - targetY, dz = posZ[i] - targetZ;
+        const r2 = dx * dx + dy * dy + dz * dz;
+        if (r2 > maxR2) maxR2 = r2;
+      }
+      camDist = Math.sqrt(maxR2) * 1.5;
+      if (camDist < 1) camDist = 5;
+    }
+
+    // ── Resize handler ──
+    $melker.engine.onResize(() => {
+      const canvas = $melker.getElementById('view');
+      if (!canvas) return;
+      const size = $melker.engine.getTerminalSize();
+      canvas.setSize(size.width, size.height - 1);
+      if (splatCount > 0) renderSplats();
+    });
+  </script>
+
+  <script type="typescript" async="ready">
+    const canvas = $melker.getElementById('view');
+    const statusEl = $melker.getElementById('status');
+
+    const size = $melker.engine.getTerminalSize();
+    canvas.setSize(size.width, size.height - 1);
+
+    const filePath = argv[1];
+    if (!filePath) {
+      statusEl.props.text = 'Usage: melker.ts gaussian-splat.melker <file.splat>';
+      $melker.render();
+    } else {
+      statusEl.props.text = 'Loading ' + filePath + '...';
+      $melker.render();
+
+      try {
+        const data = await Deno.readFile(filePath);
+        const count = $app.parseSplatFile(data.buffer);
+        statusEl.props.text = `Loaded ${count} splats...`;
+        $melker.render();
+
+        $app.autoCenter();
+        $app.renderSplats();
+        $melker.render();
+      } catch (e) {
+        statusEl.props.text = 'Error: ' + String(e);
+        $melker.render();
+      }
+    }
+  </script>
+</melker>

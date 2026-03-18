@@ -87,6 +87,7 @@ export interface DataHeatmapProps extends BaseProps {
   max?: number;
 
   colorScale?: ColorScaleName;
+  scale?: 'linear' | 'log';  // Value mapping: 'linear' (default) or 'log' for wide-range data
 
   // Isolines
   isolines?: Isoline[];           // Manual isoline definitions
@@ -352,6 +353,9 @@ export class DataHeatmapElement extends Element implements Renderable, Focusable
   private _normalizeValue(value: number): number {
     const range = this._maxValue - this._minValue;
     if (range === 0) return 0.5;
+    if (this.props.scale === 'log') {
+      return Math.max(0, Math.min(1, Math.log1p(value - this._minValue) / Math.log1p(range)));
+    }
     return Math.max(0, Math.min(1, (value - this._minValue) / range));
   }
 
@@ -804,7 +808,11 @@ export class DataHeatmapElement extends Element implements Renderable, Focusable
     // Render color/pattern bar
     for (let i = 0; i < barWidth; i++) {
       const t = i / (barWidth - 1);  // 0 to 1
-      const value = this._minValue + t * (this._maxValue - this._minValue);
+      // In log scale, map t through exp so the legend gradient matches cell colors
+      const range = this._maxValue - this._minValue;
+      const value = this.props.scale === 'log'
+        ? this._minValue + Math.expm1(t * Math.log1p(range))
+        : this._minValue + t * range;
 
       if (isBwMode) {
         const pattern = this._getBwPatternForValue(value);
@@ -1292,6 +1300,7 @@ export const dataHeatmapSchema: ComponentSchema = {
       enum: ['viridis', 'plasma', 'inferno', 'thermal', 'grayscale', 'diverging', 'greens', 'reds'],
       description: 'Color scale (default: viridis)',
     },
+    scale: { type: 'string', enum: ['linear', 'log'], description: 'Value mapping scale (default: linear). Log scale improves contrast for wide-range data' },
     isolines: { type: 'array', description: 'Isoline definitions: [{value, color?, label?}]' },
     showIsolineLabels: { type: 'boolean', description: 'Show labels on isolines (default: false)' },
     showCells: { type: 'boolean', description: 'Show cell backgrounds (default: true). Set to false for isolines-only display' },

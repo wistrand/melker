@@ -687,7 +687,12 @@ Renders markdown content with support for images, links, and code blocks.
 **Canvas** (`examples/canvas/`):
 - `analog-clock.melker` - Canvas-based analog clock
 - `basics.melker` - Canvas graphics basics
+- `checkerboard.melker` - Checkerboard pattern
+- `dithering.melker` - Dithering algorithm comparison
+- `gaussian-splat.melker` - 3D Gaussian splat renderer (.splat files)
 - `gfx-modes.melker` - GFX modes and dithering
+- `svg-path.melker` - SVG path rendering
+- `text-analog-clock.melker` - Text-based analog clock
 - `shaders/plasma-shader.melker` - Plasma shader effect
 - `shaders/metaballs.melker` - Metaballs animation
 - `images/image-demo.melker` - Image component

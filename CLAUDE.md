@@ -81,6 +81,7 @@ New to Melker? Read in this order:
 | Server              | [server-architecture.md](agent_docs/server-architecture.md)          |
 | Keyboard & focus    | [keyboard-focus-navigation-architecture.md](agent_docs/keyboard-focus-navigation-architecture.md) |
 | Command element     | [command-element-architecture.md](agent_docs/command-element-architecture.md)                      |
+| DevTools            | [devtools-inspect-architecture.md](agent_docs/devtools-inspect-architecture.md)                    |
 | Graph/diagrams      | [graph-architecture.md](agent_docs/graph-architecture.md)            |
 | Graphics pipeline   | [graphics-architecture.md](agent_docs/graphics-architecture.md)      |
 | Isolines mode       | [isolines-architecture.md](agent_docs/isolines-architecture.md)      |

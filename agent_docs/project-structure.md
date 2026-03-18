@@ -65,7 +65,6 @@ Detailed file layout for the Melker codebase.
 | `viewport.ts`         | Viewport management for scrolling                |
 | `viewport-buffer.ts`  | Viewport buffer proxies                          |
 | `content-measurer.ts` | Content size measurement                         |
-| `clipped-buffer.ts`   | Clipped buffer rendering                         |
 | `stylesheet.ts`       | CSS-like stylesheet system, @media/@container parsing |
 | `css-animation.ts`    | Animation interpolation engine                   |
 | `easing.ts`           | Timing functions (cubic bezier, steps)           |

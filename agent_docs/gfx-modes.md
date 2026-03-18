@@ -24,6 +24,22 @@ Unicode sextant characters - 2x3 pixels per terminal cell, full color support.
 
 **Best for:** Everything (highest resolution)
 
+**Dithering and subpixel resolution:**
+
+Sextant characters encode a 2x3 grid per terminal cell, but each cell can only display **two colors** (foreground + background). The renderer splits the 6 subpixels into fg/bg groups using a brightness threshold. For content with smooth color gradients (e.g. software rasterizers, procedural drawing), neighboring subpixels within a cell often have nearly identical colors. The brightness split puts them all in the same group, producing a solid block character (`█`) — effectively cell-level resolution, not subpixel.
+
+Setting `dither="auto"` enables error-diffusion dithering across the pixel buffer **before** sextant quantization. This introduces per-pixel brightness variations that create meaningful fg/bg splits within cells, producing actual sextant patterns instead of solid blocks. The result is visibly higher effective resolution.
+
+**When to use `dither="auto"` on canvas:**
+- Programmatic pixel drawing (`setPixelColor`) with smooth gradients or many colors per cell
+- Software rasterizers (3D renderers, ray tracers, splat renderers)
+- Any content where adjacent subpixels have similar but not identical colors
+
+**When it's not needed:**
+- Binary/high-contrast drawing (lines, shapes, text) — brightness split works naturally
+- Image loading (`src` prop) — images use separate quantization path
+- Sixel/Kitty/iTerm2 modes — true pixel rendering, no sextant quantization
+
 **Known limitations:**
 - **Rio terminal** does not render Unicode Sextant Block characters (U+1FB00-U+1FB3F) correctly. Use `MELKER_GFX_MODE=iterm2` as a workaround since Rio supports the iTerm2 protocol.
 

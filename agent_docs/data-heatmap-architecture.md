@@ -56,6 +56,7 @@ export interface DataHeatmapProps extends BaseProps {
   // Color mapping
   colorScale?: 'viridis' | 'plasma' | 'inferno' | 'thermal' |
                'grayscale' | 'diverging' | 'greens' | 'reds';
+  scale?: 'linear' | 'log';        // Value mapping scale (default: 'linear')
 
   // Isolines
   isolines?: Isoline[];           // Contour lines at specific values (manual)
@@ -218,6 +219,17 @@ const MARCHING_SQUARES_CHARS: Record<number, string | null> = {
 | `diverging` | cold ↔ hot     | Blue → white → red            | Anomalies, centered data      |
 | `greens`    | light → dark   | White → green                 | Positive values, growth       |
 | `reds`      | light → dark   | White → red                   | Alerts, warnings              |
+
+### Value Scale
+
+The `scale` prop controls how values map to colors:
+
+| Scale    | Mapping                                    | Use Case                              |
+|----------|--------------------------------------------|---------------------------------------|
+| `linear` | `(value - min) / (max - min)`              | Default, evenly distributed data      |
+| `log`    | `log1p(value - min) / log1p(max - min)`    | Wide-range data (e.g. 1 to 700)       |
+
+Log scale uses `log1p`/`expm1` (log/exp of 1+x) so zero values map cleanly to 0. Tooltips and `showValues` always display original values. The legend gradient is also rendered in log space to match cell colors.
 
 ### BW Mode Fallback
 

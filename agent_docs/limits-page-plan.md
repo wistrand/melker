@@ -62,7 +62,7 @@ Not a disclaimer wall. Short, specific scenarios with what to use instead. Where
 
 End with: "If your use case isn't in this list, Melker is probably fine. The rest of this page is about what happens at the edges."
 
-Note after the table: "For a detailed feature-by-feature comparison with other TUI frameworks, see the [TUI Comparison](reference/agent_docs/tui-comparison.md)."
+Note after the table: "For a detailed feature-by-feature comparison with other TUI frameworks, see the [TUI Comparison](tui-comparison.md)."
 
 ### 2. What Melker doesn't have
 

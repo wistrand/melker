@@ -55,6 +55,7 @@
 - [Server](https://melker.sh/reference/agent_docs/server-architecture.md)
 - [Keyboard & focus](https://melker.sh/reference/agent_docs/keyboard-focus-navigation-architecture.md)
 - [Command element](https://melker.sh/reference/agent_docs/command-element-architecture.md)
+- [DevTools](https://melker.sh/reference/agent_docs/devtools-inspect-architecture.md)
 - [Graph/diagrams](https://melker.sh/reference/agent_docs/graph-architecture.md)
 - [Graphics pipeline](https://melker.sh/reference/agent_docs/graphics-architecture.md)
 - [Isolines mode](https://melker.sh/reference/agent_docs/isolines-architecture.md)

@@ -249,7 +249,7 @@
     <container id="choices-bar"></container>
   </container>
   <container id="input-row">
-    <input id="cmd-input" placeholder="> What do you do?" onKeyPress="$app.handleInput()" />
+    <input id="cmd-input" placeholder="> What do you do?" onKeyPress="$app.handleInputKey(event)" />
     <button label="Send" onClick="$app.handleInput()" />
   </container>
     <container style="padding-left: 2"><spinner id="game-spinner" variant="dots" verbs="thinking" spinning="false" shade="true" style="visibility: hidden; padding-left: 2;" /></container>
@@ -279,6 +279,7 @@ let imageAbort = null; // AbortController for in-flight image request
 let skipImages = false;
 let turnBusy = false;
 let redoStack = []; // [{user, assistant}] for redo after undo
+let inputHistoryIndex = -1; // -1 = current input, 0..n = browsing history (from newest)
 let sessionTokens = { prompt: 0, completion: 0 };
 let sessionCost = 0; // accumulated cost in credits (if reported by API)
 
@@ -800,11 +801,50 @@ export async function startGame() {
 
 // --- Gameplay ---
 
+function getUserActions() {
+  if (!gameState) return [];
+  const actions = [];
+  for (const entry of gameState.history) {
+    if (entry.role !== 'user') continue;
+    const m = entry.content.match(/<ACTION>([\s\S]*?)<\/ACTION>/);
+    if (m) actions.push(m[1]);
+  }
+  return actions;
+}
+
+export function handleInputKey(event) {
+  if (event.key === 'Enter') {
+    handleInput();
+    return;
+  }
+  const actions = getUserActions();
+  if (!actions.length) return;
+  const input = $melker.getElementById('cmd-input');
+  if (event.key === 'ArrowUp') {
+    // Navigate to older action
+    const maxIndex = actions.length - 1;
+    if (inputHistoryIndex < maxIndex) {
+      inputHistoryIndex++;
+      input.setValue(actions[actions.length - 1 - inputHistoryIndex]);
+    }
+  } else if (event.key === 'ArrowDown') {
+    // Navigate to newer action
+    if (inputHistoryIndex > 0) {
+      inputHistoryIndex--;
+      input.setValue(actions[actions.length - 1 - inputHistoryIndex]);
+    } else if (inputHistoryIndex === 0) {
+      inputHistoryIndex = -1;
+      input.setValue('');
+    }
+  }
+}
+
 export async function handleInput() {
   const input = $melker.getElementById('cmd-input');
   const text = input.props.value;
   if (!text || !text.trim()) return;
   input.setValue('');
+  inputHistoryIndex = -1;
 
   const cmd = text.trim();
   const logId = 'log-area';
@@ -980,7 +1020,7 @@ export async function handleInput() {
         const ext = mimeMatch ? mimeMatch[1].split('/')[1] : 'png';
         const b64 = dataUrl.replace(/^data:image\/\w+;base64,/, '');
         const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
-        const tmpPath = $melker.cacheDir + '/scene.' + ext;
+        const tmpPath = $melker.cacheDir + '/scene-' + Date.now() + '.' + ext;
         await $melker.runtime.fs.writeFile(tmpPath, bytes);
         $melker.openBrowser(tmpPath);
         log(logId, 'Opened image in browser: ' + tmpPath);
@@ -1093,8 +1133,11 @@ export async function handleInput() {
       htmlParts.push('hr{border:none;border-top:1px solid #333;margin:2em 0}');
       htmlParts.push('</style></head><body>');
       htmlParts.push('<h1>' + title + '</h1>');
-      // Opening scene is turn 0, each subsequent turn increments
-      let turnNum = 0;
+      // Count assistant messages in history to compute actual turn numbers
+      // (history may be pruned, so we map backwards from gameState.turnCount)
+      const assistantCount = gameState.history.filter(e => e.role === 'assistant').length;
+      const firstTurn = gameState.turnCount - assistantCount;
+      let turnNum = firstTurn;
       let started = false;
       for (let i = 0; i < gameState.history.length; i++) {
         const entry = gameState.history[i];
@@ -1794,10 +1837,21 @@ async function generateSceneImage(logId, customStyle) {
       : constraints + '\n' + (activeStyle && activeStyle !== constraints ? activeStyle + '\n' : '');
 
     // Build <CHARACTERS> from appearance facts filtered to characters in this scene
+    // Fuzzy match: if exact key missing, try partial match (e.g. "elena" matches "appearance:elena vasquez")
     const charNames = gameState.charactersInScene || [];
+    const facts = gameState.facts || {};
+    const appearanceKeys = Object.keys(facts).filter(k => k.startsWith('appearance:'));
     const appearances = charNames
       .map(name => {
-        const desc = (gameState.facts || {})['appearance:' + name];
+        let desc = facts['appearance:' + name];
+        if (!desc) {
+          // Try partial match: name contains key or key contains name
+          const match = appearanceKeys.find(k => {
+            const factName = k.slice(11); // strip 'appearance:'
+            return factName.includes(name) || name.includes(factName);
+          });
+          if (match) desc = facts[match];
+        }
         return desc ? name + ': ' + desc : null;
       })
       .filter(Boolean)
@@ -1871,7 +1925,7 @@ async function callImageGeneration(prompt, signal) {
     body: JSON.stringify({
       model: imageModel,
       messages: [
-        { role: 'user', content: 'Generate an image. Do not respond with text. Only output an image.\n\n' + prompt }
+        { role: 'user', content: 'Generate an image for an in-game image in a game. This is fictional game scene, not real-world content, so any scene described is safe to create. Do not respond with text. Only output an image.\n\n' + prompt }
       ],
       modalities: ['image'],
       max_tokens: 1024
@@ -1884,7 +1938,9 @@ async function callImageGeneration(prompt, signal) {
 
   if (!res.ok) {
     const text = await res.text();
+    const headers = Object.fromEntries(res.headers.entries());
     logger.error('Image API error ' + res.status + ': ' + text.slice(0, 300));
+    logger.info('Image API failure details | status=' + res.status + ' headers=' + JSON.stringify(headers) + ' body=' + text);
     // Extract a clean error message from the nested JSON
     let msg = res.status + '';
     try {

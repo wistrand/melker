@@ -724,7 +724,10 @@ export async function runMelkerFile(
           await openBrowser(url);
           return true;
         } catch (error) {
-          logger?.error(`Failed to open browser: ${error}`);
+          const msg = error instanceof Error ? error.message : String(error);
+          logger?.error(`Failed to open browser: ${msg}`);
+          getToastManager().setRequestRender(() => engine.render());
+          getToastManager().show('Failed to open browser: ' + msg, { type: 'error' });
           return false;
         }
       },

@@ -501,11 +501,12 @@ export class TextSelectionHandler {
               this._deps.onRender();
             }
           } else if (this._clickCount === 3) {
-            // Triple-click: select line
+            // Triple-click: select all for input/textarea, select line for other components
+            const selectAll = targetElement.type === 'textarea' || targetElement.type === 'input';
             this._isSelecting = false;
             this._textSelection = {
-              start: { x: bounds.x, y: clampedPos.y },
-              end: { x: bounds.x + bounds.width - 1, y: clampedPos.y },
+              start: { x: bounds.x, y: selectAll ? bounds.y : clampedPos.y },
+              end: { x: bounds.x + bounds.width - 1, y: selectAll ? bounds.y + bounds.height - 1 : clampedPos.y },
               isActive: true,
               componentId: targetElement.id,
               componentBounds: bounds,

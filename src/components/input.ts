@@ -373,6 +373,10 @@ export class InputElement extends Element implements Renderable, Focusable, Inte
       if (cursor < value.length) {
         cursor = value.length;
         changed = true;
+      } else if (typeof this.props.onKeyPress === 'function') {
+        // At end of input — emit for history navigation
+        this.props.onKeyPress(createKeyPressEvent('ArrowDown', { target: this.id }));
+        return true;
       }
     } else if (key === 'ArrowUp') {
       if (this._showingCompletions && this._completions.length > 0) {
@@ -387,6 +391,10 @@ export class InputElement extends Element implements Renderable, Focusable, Inte
       if (cursor > 0) {
         cursor = 0;
         changed = true;
+      } else if (typeof this.props.onKeyPress === 'function') {
+        // At start of input — emit for history navigation
+        this.props.onKeyPress(createKeyPressEvent('ArrowUp', { target: this.id }));
+        return true;
       }
     } else if (key === 'Enter') {
       // Handle completion selection or normal Enter
@@ -754,7 +762,7 @@ export const inputSchema: ComponentSchema = {
     format: { type: 'string', enum: ['text', 'password'], description: 'Input format: text (default) or password (masked with *)' },
     complete: { type: 'function', description: 'Tab completion callback' },
     onChange: { type: 'handler', description: 'Called when value changes. Event: { value: string, target }' },
-    onKeyPress: { type: 'handler', description: 'Called on Enter key. Event: { key, target }' },
+    onKeyPress: { type: 'handler', description: 'Called on Enter, ArrowUp (at start), ArrowDown (at end). Event: { key, target }' },
   },
 };
 

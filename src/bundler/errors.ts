@@ -103,6 +103,38 @@ export function parseBundleError(
 
   logger.debug('Parsing bundle error', { message: message.substring(0, 200) });
 
+  // Try to match temp file references (_inline_0.ts:42:5, _init_1.ts:10:3, etc.)
+  // These come from script modules extracted from the .melker file
+  const tempFileMatch = message.match(/(_(?:inline|init|ready)_\d+\.ts):(\d+):(\d+)/);
+
+  if (tempFileMatch && generated.scriptMeta?.length) {
+    const tempFilename = tempFileMatch[1];
+    const tempLine = parseInt(tempFileMatch[2], 10);
+    const column = parseInt(tempFileMatch[3], 10);
+
+    const meta = generated.scriptMeta.find(m => m.filename === tempFilename);
+    if (meta) {
+      const lineInScript = tempLine - meta.headerLines;
+      if (lineInScript > 0) {
+        // originalLine is the <script> tag line (1-indexed). script.code includes
+        // the trailing newline of the tag line, so subtract 1 to compensate.
+        const melkerLine = meta.originalLine + lineInScript - 1;
+        const lines = generated.originalContent?.split('\n') || [];
+        const sourceLine = lines[melkerLine - 1];
+
+        logger.debug('Mapped temp file to .melker source', {
+          tempFilename, tempLine, melkerLine,
+        });
+
+        return {
+          location: { line: melkerLine, column },
+          sourceLine,
+          hint: getHintForError(message),
+        };
+      }
+    }
+  }
+
   // Try to extract line:column from error message
   // Deno errors often include "at file:///path:line:column" or just ":line:column"
   const locationMatch = message.match(/:(\d+):(\d+)/);
@@ -146,7 +178,7 @@ export function getHintForError(message: string): string | undefined {
     return 'Ensure --unstable-bundle flag is provided for npm: imports';
   }
 
-  if (lowerMessage.includes('unexpected token')) {
+  if (lowerMessage.includes('unexpected token') || lowerMessage.includes('expression expected') || lowerMessage.includes('expected') && lowerMessage.includes('could not be parsed')) {
     return 'Check for syntax errors: missing brackets, semicolons, or quotes';
   }
 

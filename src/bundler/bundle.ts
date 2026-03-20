@@ -119,12 +119,18 @@ export async function bundle(
         .map((e: { text: string }) => e.text.replace(/\x1b\[[0-9;]*m/g, '')) // strip ANSI codes
         .join('\n\n');
 
+      // Try to map first error's location back to .melker source
+      const firstErrorText = errors[0]?.text?.replace(/\x1b\[[0-9;]*m/g, '') ?? '';
+      const parsed = parseBundleError(new Error(firstErrorText), generated);
+
       displayFatalError(
         'bundle',
         new Error(`Bundle failed with ${errors.length} error(s):\n\n${errorMessages}`),
         {
           filepath: generated.sourceUrl,
-          hint: 'Check that all imported modules exist and paths are correct.',
+          sourceLocation: parsed.location,
+          sourceLine: parsed.sourceLine,
+          hint: parsed.hint ?? 'Check that all imported modules exist and paths are correct.',
         }
       );
       throw new Error('unreachable');

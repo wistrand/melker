@@ -2,6 +2,23 @@
 import { type Bounds, Element, type Size, isScrollableType, isScrollingEnabled } from './types.ts';
 import { clipBounds, clamp } from './geometry.ts';
 
+/**
+ * Number of columns reserved on the right edge of a scrollable container's
+ * content area when a vertical scrollbar is visible. One column is for the
+ * scrollbar glyph itself and one for the spacing between content and the
+ * scrollbar. The layout engine uses this value to constrain children's wrap
+ * width and the renderer uses the same value to clip child rendering, so
+ * they must stay in sync.
+ */
+export const VERTICAL_SCROLLBAR_RESERVED_WIDTH = 2;
+
+/**
+ * Number of rows reserved on the bottom edge of a scrollable container's
+ * content area when a horizontal scrollbar is visible (the scrollbar glyph
+ * itself, no extra spacing).
+ */
+export const HORIZONTAL_SCROLLBAR_RESERVED_HEIGHT = 1;
+
 export interface ScrollbarLayout {
   bounds: Bounds;
   trackLength: number;
@@ -238,7 +255,7 @@ export class ViewportManager {
     }
 
     if (scrollbars.horizontal) {
-      adjustedRect.height = Math.max(1, adjustedRect.height - 1);
+      adjustedRect.height = Math.max(1, adjustedRect.height - HORIZONTAL_SCROLLBAR_RESERVED_HEIGHT);
     }
 
     return adjustedRect;

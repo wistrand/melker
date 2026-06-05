@@ -5,7 +5,7 @@ import { Element, type Style, type Bounds, type LayoutProps, type ComponentRende
 import { setGlobalRequestRender, getGlobalLogger } from './global-accessors.ts';
 import { clipBounds, clamp } from './geometry.ts';
 import { DualBuffer, type Cell, EMPTY_CHAR } from './buffer.ts';
-import { type Viewport, ViewportManager, globalViewportManager, CoordinateTransform } from './viewport.ts';
+import { type Viewport, ViewportManager, globalViewportManager, CoordinateTransform, VERTICAL_SCROLLBAR_RESERVED_WIDTH, HORIZONTAL_SCROLLBAR_RESERVED_HEIGHT } from './viewport.ts';
 import { ViewportDualBuffer, createClipViewport } from './viewport-buffer.ts';
 import { ContainerElement } from './components/container.ts';
 import { DialogElement } from './components/dialog.ts';
@@ -1056,8 +1056,8 @@ export class RenderingEngine {
       // Reduce content bounds to reserve space for scrollbars
       const adjustedContentBounds = {
         ...contentBounds,
-        width: needsVerticalScrollbar ? Math.max(1, contentBounds.width - 2) : contentBounds.width,  // Reserve 2 chars for scrollbar and spacing
-        height: needsHorizontalScrollbar ? Math.max(1, contentBounds.height - 1) : contentBounds.height
+        width: needsVerticalScrollbar ? Math.max(1, contentBounds.width - VERTICAL_SCROLLBAR_RESERVED_WIDTH) : contentBounds.width,
+        height: needsHorizontalScrollbar ? Math.max(1, contentBounds.height - HORIZONTAL_SCROLLBAR_RESERVED_HEIGHT) : contentBounds.height
       };
 
       // Build clip rect: expand on axes where overflow is 'visible' so content isn't clipped
@@ -1857,8 +1857,8 @@ export class RenderingEngine {
         return {
           x: contentBounds.x,
           y: contentBounds.y,
-          width: needsVerticalScrollbar ? Math.max(1, contentBounds.width - 2) : contentBounds.width,
-          height: needsHorizontalScrollbar ? Math.max(1, contentBounds.height - 1) : contentBounds.height,
+          width: needsVerticalScrollbar ? Math.max(1, contentBounds.width - VERTICAL_SCROLLBAR_RESERVED_WIDTH) : contentBounds.width,
+          height: needsHorizontalScrollbar ? Math.max(1, contentBounds.height - HORIZONTAL_SCROLLBAR_RESERVED_HEIGHT) : contentBounds.height,
         };
       }
 

@@ -6,7 +6,12 @@ import { TextElement } from '../src/components/text.ts';
 import { ContainerElement } from '../src/components/container.ts';
 import { DualBuffer } from '../src/buffer.ts';
 import { ViewportDualBuffer, ViewportBufferProxy } from '../src/viewport-buffer.ts';
-import { globalViewportManager } from '../src/viewport.ts';
+import {
+  globalViewportManager,
+  HORIZONTAL_SCROLLBAR_RESERVED_HEIGHT,
+  VERTICAL_SCROLLBAR_RESERVED_WIDTH,
+} from '../src/viewport.ts';
+import { LayoutEngine, type LayoutContext } from '../src/layout.ts';
 import { COLORS } from '../src/components/color-utils.ts';
 
 Deno.test('Viewport System - Basic clipping functionality', () => {
@@ -242,4 +247,84 @@ Deno.test('Backward Compatibility - Legacy components still work', () => {
   assertExists(layoutTree.bounds);
   assertEquals(layoutTree.bounds.width, 40);
   assertEquals(layoutTree.bounds.height, 5);
+});
+
+// Regression test for: vertical scrollbar overlapping rightmost column of content.
+//
+// Bug history: layout reserved only 1 column for the scrollbar while the
+// renderer clipped to (width - 2). Children therefore wrapped one column wider
+// than the visible area and the rightmost rendered column was dropped under
+// the scrollbar, also producing a phantom horizontal scrollbar.
+//
+// This test pins the contract: when a vertical scrollbar is shown, the layout
+// engine must constrain children to (contentBounds.width - VERTICAL_SCROLLBAR_RESERVED_WIDTH).
+Deno.test('Scrollable container reserves VERTICAL_SCROLLBAR_RESERVED_WIDTH columns for children', () => {
+  const engine = new LayoutEngine();
+
+  // Container width 30, height 5; content height 10 forces a vertical scrollbar.
+  const children = [];
+  for (let i = 0; i < 10; i++) {
+    children.push(new TextElement({ text: `Line ${i + 1}`, id: `row-${i}` }));
+  }
+  const container = new ContainerElement({
+    id: 'scroll',
+    width: 30,
+    height: 5,
+    style: { overflow: 'scroll' },
+  }, children);
+
+  const context: LayoutContext = {
+    viewport: { x: 0, y: 0, width: 80, height: 24 },
+    parentBounds: { x: 0, y: 0, width: 80, height: 24 },
+    availableSpace: { width: 80, height: 24 },
+  };
+
+  const tree = engine.calculateLayout(container, context);
+
+  // Vertical scrollbar must be present.
+  assertExists(tree.scrollbars);
+  assertEquals(tree.scrollbars!.vertical?.visible, true);
+
+  // Each child's bounds.width must be reduced by VERTICAL_SCROLLBAR_RESERVED_WIDTH
+  // relative to the container's content width (= 30 here, no border/padding).
+  const expectedChildWidth = tree.contentBounds.width - VERTICAL_SCROLLBAR_RESERVED_WIDTH;
+  assertEquals(expectedChildWidth, 28);
+  for (const child of tree.children) {
+    assertEquals(
+      child.bounds.width,
+      expectedChildWidth,
+      `child ${child.element.id} should be wrapped to width ${expectedChildWidth}, got ${child.bounds.width}`,
+    );
+  }
+});
+
+// Regression: when no vertical scrollbar is needed, no width must be reserved.
+Deno.test('Scrollable container reserves no width when content fits vertically', () => {
+  const engine = new LayoutEngine();
+
+  const child = new TextElement({ text: 'fits', id: 'only' });
+  const container = new ContainerElement({
+    id: 'scroll-fits',
+    width: 30,
+    height: 10,
+    style: { overflow: 'scroll' },
+  }, [child]);
+
+  const context: LayoutContext = {
+    viewport: { x: 0, y: 0, width: 80, height: 24 },
+    parentBounds: { x: 0, y: 0, width: 80, height: 24 },
+    availableSpace: { width: 80, height: 24 },
+  };
+
+  const tree = engine.calculateLayout(container, context);
+
+  // No vertical scrollbar => child gets full content width.
+  assertEquals(tree.scrollbars?.vertical?.visible ?? false, false);
+  assertEquals(tree.children[0].bounds.width, tree.contentBounds.width);
+});
+
+// Sanity check on the constants themselves — guards against accidental drift.
+Deno.test('Scrollbar reservation constants have the documented values', () => {
+  assertEquals(VERTICAL_SCROLLBAR_RESERVED_WIDTH, 2);
+  assertEquals(HORIZONTAL_SCROLLBAR_RESERVED_HEIGHT, 1);
 });

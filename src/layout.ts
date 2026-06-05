@@ -4,7 +4,7 @@
 import { Element, type Style, type Bounds, type Size, type LayoutProps, type BoxSpacing, type IntrinsicSizeContext, isRenderable, isScrollableType, isScrollingEnabled } from './types.ts';
 import { SizingModel, globalSizingModel, type BoxModel, type ChromeCollapseState } from './sizing.ts';
 import { ContentMeasurer, globalContentMeasurer } from './content-measurer.ts';
-import { ViewportManager, globalViewportManager, type ScrollbarLayout } from './viewport.ts';
+import { ViewportManager, globalViewportManager, type ScrollbarLayout, VERTICAL_SCROLLBAR_RESERVED_WIDTH } from './viewport.ts';
 import { getLogger } from './logging.ts';
 import type { Stylesheet, StyleContext } from './stylesheet.ts';
 import { computeStyle, computeLayoutProps } from './layout-style.ts';
@@ -339,9 +339,14 @@ export class LayoutEngine {
 
         // Use real content dimensions instead of artificial virtual space
         const actualContentHeight = Math.max(actualContentSize.height, contentBounds.height);
-        // Reduce available width when vertical scrollbar is present
+        // Match the space reserved by the renderer for a vertical scrollbar
+        // (see _renderNodeInternal in rendering.ts). Without this, children
+        // wrap to a wider area than the clip rect and the rightmost rendered
+        // column is dropped under the scrollbar.
         const hasVerticalScrollbar = viewport.scrollbars.vertical?.visible ?? false;
-        const childAvailableWidth = hasVerticalScrollbar ? contentBounds.width - 1 : contentBounds.width;
+        const childAvailableWidth = hasVerticalScrollbar
+          ? Math.max(1, contentBounds.width - VERTICAL_SCROLLBAR_RESERVED_WIDTH)
+          : contentBounds.width;
 
         context.parentBounds = {
           x: contentBounds.x,

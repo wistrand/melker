@@ -64,6 +64,7 @@ const FORWARDED_DENO_FLAGS = [
   '--inspect',      // Enable V8 inspector
   '--inspect-wait', // Enable V8 inspector, wait for connection
   '--inspect-brk',  // Enable V8 inspector, break at start
+  '--unstable-net', // Enable unstable net APIs (UDP datagrams, etc.)
 ];
 
 /**
@@ -196,6 +197,7 @@ Deno flags (forwarded to subprocess):
   --no-check               Skip type checking (faster startup)
   --quiet, -q              Suppress diagnostic output
   --cached-only            Require remote deps already cached
+  --unstable-net           Enable unstable net APIs (UDP datagrams, etc.)
 
 ${generateFlagHelp()}
 

@@ -55,6 +55,23 @@ This document inventories every unstable/experimental runtime flag used by Melke
 
 ---
 
+### 4. `--unstable-net` (Deno)
+
+**What it enables:** Access to unstable networking APIs, notably UDP datagram sockets (`Deno.listenDatagram` with `transport: "udp"`) used by apps that need UDP.
+
+**Where it's used:**
+
+| Location                            | Context                                                        |
+|-------------------------------------|----------------------------------------------------------------|
+| `melker-launcher.ts` `FORWARDED_DENO_FLAGS` | Opt-in flag forwarded to the app subprocess when the user passes it |
+| `melker-launcher.ts` `--help` text          | Documented under "Deno flags (forwarded to subprocess)"     |
+
+**How it's used:** Unlike `--unstable-bundle`, this flag is **not** added automatically — it is only forwarded when the user explicitly runs `melker.ts --unstable-net app.melker`. It merely lifts the runtime-capability gate; the app still needs matching `net` permission in its policy, since UDP bind and every `.send` destination are checked against `--allow-net` (host:port).
+
+**Impact if removed/changed:** Only affects apps that opt in to UDP. Apps that never pass the flag are unaffected. If Deno stabilises UDP, the flag becomes unnecessary (remove from the allowlist and help text); if renamed, update both occurrences.
+
+---
+
 ## How to Check Flag Status
 
 ### Deno: `--unstable-bundle`
@@ -183,6 +200,19 @@ else
 fi
 
 echo ""
+echo "=== Deno --unstable-net ==="
+if deno eval --unstable-net 'console.log("ok")' 2>/dev/null; then
+  echo "PASS: --unstable-net accepted"
+else
+  echo "FAIL: --unstable-net not accepted"
+fi
+
+# Check if UDP datagrams work WITHOUT the flag (i.e. stabilised)
+if deno eval "const l = Deno.listenDatagram({ hostname: '127.0.0.1', port: 0, transport: 'udp' }); l.close(); console.log('ok')" 2>/dev/null | grep -q ok; then
+  echo "INFO: UDP datagrams available WITHOUT --unstable-net (stabilised?)"
+fi
+
+echo ""
 echo "=== Node.js --experimental-transform-types ==="
 if command -v node &>/dev/null; then
   if node --experimental-transform-types -e 'console.log("ok")' 2>/dev/null; then
@@ -204,7 +234,7 @@ fi
 To find every file that references these flags:
 
 ```bash
-grep -rn '--unstable-bundle\|--expose-gc\|--experimental-transform-types' --include='*.ts' --include='*.json' --include='*.md' .
+grep -rn '--unstable-bundle\|--unstable-net\|--expose-gc\|--experimental-transform-types' --include='*.ts' --include='*.json' --include='*.md' .
 ```
 
 This catches documentation, configs, source code, and tests in one pass.

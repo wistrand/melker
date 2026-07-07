@@ -9,6 +9,13 @@ import { extractHostFromUrl, extractHostOrValue } from './url-utils.ts';
 import { expandShortcutsInPlace } from './shortcut-utils.ts';
 import { cwd } from '../runtime/mod.ts';
 
+// Deno's default --allow-import allowlist (Deno 2.x). Providing --allow-import=<hosts> OVERRIDES
+// this default list rather than extending it, so we re-list it whenever we add the app's own origin.
+const DEFAULT_IMPORT_HOSTS = [
+  'deno.land', 'jsr.io', 'esm.sh', 'raw.esm.sh', 'cdn.jsdelivr.net',
+  'raw.githubusercontent.com', 'gist.githubusercontent.com',
+];
+
 // Re-export shortcut constants and helpers so existing consumers don't break
 export {
   AI_RUN_COMMANDS_ALL,
@@ -120,6 +127,20 @@ export function policyToDenoFlags(
       if (hosts.length > 0) {
         flags.push(`--allow-net=${[...new Set(hosts)].join(',')}`);
       }
+    }
+  }
+
+  // --allow-import (Deno 2.0+): HTTP(S) module imports are gated behind a permission SEPARATE from
+  // --allow-net. A remotely-loaded app with an external <script src="./app.ts"> (plus its transitive
+  // imports) therefore needs import access to its own origin -- something Deno 1.x granted freely, so
+  // remote apps with external scripts broke on the Deno 2 upgrade. When the policy opts into same-site
+  // trust via net "samesite", grant --allow-import for the source host, re-listing Deno's default
+  // registries (since --allow-import overrides, not extends, that default list). Runs independently of
+  // the "*" net shortcut above, so `net: ["*", "samesite"]` still gets the import grant.
+  if (p.net?.includes('samesite')) {
+    const importHost = sourceUrl ? extractHostFromUrl(sourceUrl) : null;
+    if (importHost) {
+      flags.push(`--allow-import=${[...DEFAULT_IMPORT_HOSTS, importHost].join(',')}`);
     }
   }
 

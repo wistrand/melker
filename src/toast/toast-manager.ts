@@ -23,7 +23,7 @@ export class ToastManager {
   private _lastActivity: number = 0;
   private _config: ToastConfig;
   private _requestRender?: () => void;
-  private _expiryTimer?: number;
+  private _expiryTimer?: ReturnType<typeof setTimeout>;
 
   constructor(config?: Partial<ToastConfig>) {
     this._config = { ...DEFAULT_TOAST_CONFIG, ...config };
@@ -266,7 +266,7 @@ export class ToastManager {
       if (this._toasts.length > 0) {
         this._scheduleExpiryTimer();
       }
-    }, delay) as unknown as number;
+    }, delay);
   }
 
   /**

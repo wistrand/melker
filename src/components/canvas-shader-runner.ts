@@ -17,7 +17,7 @@ const logger = getLogger('shader-runner');
  */
 export interface ShaderState {
   // Timer management
-  timer: number | null;
+  timer: ReturnType<typeof setTimeout> | null;
   startTime: number;
   lastFrameTime: number;
   frameInterval: number;

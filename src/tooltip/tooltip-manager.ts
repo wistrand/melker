@@ -17,8 +17,8 @@ import { isStdoutEnabled } from '../stdout.ts';
 export class TooltipManager {
   private _config: TooltipConfig;
   private _state: TooltipState | null = null;
-  private _pendingTimer?: number;
-  private _contentUpdateTimer?: number;
+  private _pendingTimer?: ReturnType<typeof setTimeout>;
+  private _contentUpdateTimer?: ReturnType<typeof setTimeout>;
   private _requestRender?: () => void;
   private _lastContent: string | null = null;
   private _lastElementId: string | null = null;
@@ -90,7 +90,7 @@ export class TooltipManager {
           this._state.content = this._lastContent;
           this._requestRender?.();
         }
-      }, 150) as unknown as number;
+      }, 150);
       return;
     }
 
@@ -117,7 +117,7 @@ export class TooltipManager {
         this._state.visible = true;
         this._requestRender?.();
       }
-    }, delay) as unknown as number;
+    }, delay);
   }
 
   /**

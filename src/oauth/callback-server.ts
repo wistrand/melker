@@ -19,7 +19,7 @@ export class OAuthCallbackServer {
   private _options: Required<CallbackServerOptions>;
   private _codeResolve?: (result: CallbackResult) => void;
   private _codeReject?: (error: Error) => void;
-  private _timeoutId?: number;
+  private _timeoutId?: ReturnType<typeof setTimeout>;
 
   constructor(options: CallbackServerOptions = {}) {
     this._options = {

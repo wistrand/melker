@@ -8,7 +8,7 @@ export function debounce<T extends (...args: unknown[]) => void>(
   fn: T,
   delay: number
 ): (...args: Parameters<T>) => void {
-  let timeoutId: number | undefined;
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
 
   return (...args: Parameters<T>) => {
     if (timeoutId !== undefined) {
@@ -47,7 +47,7 @@ export function createDebouncedAction(
   fn: () => void,
   delay: number
 ): DebouncedAction {
-  let timeoutId: number | null = null;
+  let timeoutId: ReturnType<typeof setTimeout> | null = null;
   let pending = false;
 
   const execute = () => {
@@ -64,7 +64,7 @@ export function createDebouncedAction(
       timeoutId = setTimeout(() => {
         timeoutId = null;
         execute();
-      }, delay) as unknown as number;
+      }, delay);
     },
 
     flush: () => {
@@ -116,7 +116,7 @@ export function createThrottledAction(
 ): ThrottledAction {
   const { leading = true, trailing = true } = options;
   let lastExecuteTime = 0;
-  let timeoutId: number | null = null;
+  let timeoutId: ReturnType<typeof setTimeout> | null = null;
   let pendingTrailing = false;
 
   const execute = () => {
@@ -152,7 +152,7 @@ export function createThrottledAction(
           if (pendingTrailing) {
             execute();
           }
-        }, delay) as unknown as number;
+        }, delay);
       }
     },
 

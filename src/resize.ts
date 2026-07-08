@@ -64,7 +64,7 @@ export class ResizeHandler {
   private _options: Required<ResizeHandlerOptions>;
   private _isListening = false;
   private _resizeController?: AbortController;
-  private _pollTimer?: number;
+  private _pollTimer?: ReturnType<typeof setTimeout>;
   // Debounced resize handler
   private _debouncedDetectAndUpdateSize: () => void;
 

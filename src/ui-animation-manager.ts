@@ -59,7 +59,7 @@ export class UIAnimationManager {
   static readonly MIN_TICK = 12;
 
   private _animations: Map<string, AnimationEntry> = new Map();
-  private _timer: number | null = null;
+  private _timer: ReturnType<typeof setInterval> | null = null;
   private _currentTick: number = UIAnimationManager.MIN_TICK;
   private _requestRender: (() => void) | null = null;
   private _requestCachedRender: (() => void) | null = null;

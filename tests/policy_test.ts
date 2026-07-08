@@ -359,6 +359,58 @@ Deno.test('policyToDenoFlags generates all flag', () => {
   assertEquals(flags, ['--allow-all']);
 });
 
+Deno.test('policyToDenoFlags derives --unstable-net from udp permission', () => {
+  const policy: MelkerPolicy = {
+    permissions: {
+      net: ['239.0.0.1:5353'],
+      udp: true,
+    },
+  };
+
+  const flags = policyToDenoFlags(policy, '/app');
+
+  assert(flags.includes('--unstable-net'));
+  // udp is a capability gate, not a net grant — net is still emitted
+  assertExists(flags.find(f => f.startsWith('--allow-net=')));
+});
+
+Deno.test('policyToDenoFlags omits --unstable-net without udp permission', () => {
+  const policy: MelkerPolicy = {
+    permissions: {
+      net: ['api.example.com'],
+    },
+  };
+
+  const flags = policyToDenoFlags(policy, '/app');
+
+  assert(!flags.includes('--unstable-net'));
+});
+
+Deno.test('policyToDenoFlags adds --unstable-net alongside --allow-all when udp set', () => {
+  const policy: MelkerPolicy = {
+    permissions: {
+      all: true,
+      udp: true,
+    },
+  };
+
+  const flags = policyToDenoFlags(policy, '/tmp');
+
+  assertEquals(flags, ['--allow-all', '--unstable-net']);
+});
+
+Deno.test('policyToDenoFlags all without udp stays --allow-all only', () => {
+  const policy: MelkerPolicy = {
+    permissions: {
+      all: true,
+    },
+  };
+
+  const flags = policyToDenoFlags(policy, '/tmp');
+
+  assertEquals(flags, ['--allow-all']);
+});
+
 Deno.test('policyToDenoFlags generates read flags', () => {
   const policy: MelkerPolicy = {
     permissions: {

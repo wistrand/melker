@@ -63,12 +63,15 @@ This document inventories every unstable/experimental runtime flag used by Melke
 
 | Location                            | Context                                                        |
 |-------------------------------------|----------------------------------------------------------------|
-| `melker-launcher.ts` `FORWARDED_DENO_FLAGS` | Opt-in flag forwarded to the app subprocess when the user passes it |
+| `src/policy/flags.ts` `policyToDenoFlags` | Emitted automatically when a policy declares `permissions.udp: true` |
+| `src/policy/types.ts` `PolicyPermissions.udp` | The `udp` capability that derives the flag                  |
+| `src/policy/approval.ts` `formatPolicy`   | Surfaces `udp: enabled` in the approval prompt and `--show-policy` |
+| `melker-launcher.ts` `FORWARDED_DENO_FLAGS` | Escape hatch — also forwarded verbatim if the user passes it |
 | `melker-launcher.ts` `--help` text          | Documented under "Deno flags (forwarded to subprocess)"     |
 
-**How it's used:** Unlike `--unstable-bundle`, this flag is **not** added automatically — it is only forwarded when the user explicitly runs `melker.ts --unstable-net app.melker`. It merely lifts the runtime-capability gate; the app still needs matching `net` permission in its policy, since UDP bind and every `.send` destination are checked against `--allow-net` (host:port).
+**How it's used:** Primary path is **policy-derived**: an app declares `permissions.udp: true`, `policyToDenoFlags` adds `--unstable-net`, and the capability appears in the approval prompt so the user approves it once (cached with the policy hash). The `udp` gate is a runtime capability, **not** a network grant — UDP bind and every `.send` destination are still checked against the app's `net` permission (`--allow-net` host:port), so a UDP app declares both `udp` and `net`. It is independent of `all`: `--allow-all` does not lift Deno's unstable-API gate, so `all: true` apps that use UDP must still set `udp: true`. The manual `melker.ts --unstable-net app.melker` forwarding remains as an escape hatch (duplicate flags are harmless).
 
-**Impact if removed/changed:** Only affects apps that opt in to UDP. Apps that never pass the flag are unaffected. If Deno stabilises UDP, the flag becomes unnecessary (remove from the allowlist and help text); if renamed, update both occurrences.
+**Impact if removed/changed:** Only affects apps that opt in to UDP. If Deno stabilises UDP, drop the flag emission in `policyToDenoFlags` (keep the `udp` policy field as a no-op for compatibility) and remove it from the launcher allowlist/help; if renamed, update `policyToDenoFlags` and both launcher occurrences. Because apps declare the abstract `udp` capability rather than the raw flag, this migration is launcher-side only and does not break app policies.
 
 ---
 

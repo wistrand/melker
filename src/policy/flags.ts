@@ -67,9 +67,14 @@ export function policyToDenoFlags(
     sys: orig.sys ? [...orig.sys] : undefined,
   };
 
+  // UDP datagram capability gate (Deno's --unstable-net). This is a runtime capability,
+  // NOT a network permission — actual UDP binds and sends are still gated by --allow-net.
+  // Independent of `all`: --allow-all does not lift Deno's unstable-API gate.
+  const unstable: string[] = p.udp ? ['--unstable-net'] : [];
+
   // Handle "all" permission - no other flags needed
   if (p.all === true) {
-    return ['--allow-all'];
+    return ['--allow-all', ...unstable];
   }
 
   // Expand shortcut permissions (ai, clipboard, keyring, browser) into run/net arrays.
@@ -207,6 +212,8 @@ export function policyToDenoFlags(
       flags.push(`--deny-sys=${activeDenies.sys.join(',')}`);
     }
   }
+
+  flags.push(...unstable);
 
   return flags;
 }

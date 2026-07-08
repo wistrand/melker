@@ -163,6 +163,16 @@ export interface PolicyPermissions {
    * Shaders execute custom code per-pixel at high frame rates
    */
   shader?: boolean;
+
+  /**
+   * UDP datagram networking (shortcut)
+   * Enables Deno's --unstable-net capability, required for Deno.listenDatagram
+   * with transport "udp". This is a runtime capability gate, NOT a network grant:
+   * actual UDP binds and every send destination are still checked against the
+   * `net` permission (--allow-net host:port), so declare `net` too.
+   * Independent of `all` — --allow-all does not lift Deno's unstable-API gate.
+   */
+  udp?: boolean;
 }
 
 /**

@@ -269,6 +269,9 @@ function formatPolicyPermissions(policy: MelkerPolicy, sourceUrl?: string): stri
   if (p.shader) {
     lines.push('  shader: enabled');
   }
+  if (p.udp) {
+    lines.push('  udp: enabled (--unstable-net; UDP sends still gated by net permission)');
+  }
   if (p.map) {
     const details = MAP_NET_HOSTS.join(', ');
     lines.push(`  map: enabled${details ? ` (${details})` : ''}`);

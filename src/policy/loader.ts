@@ -571,8 +571,14 @@ export function formatPolicy(policy: MelkerPolicy, sourceUrl?: string): string {
     lines.push('');
   }
 
+  if (p.udp) {
+    lines.push('UDP:');
+    lines.push('  enabled (--unstable-net; UDP sends still gated by net permission)');
+    lines.push('');
+  }
+
   // No permissions declared
-  if (!p.read?.length && !p.write?.length && !p.net?.length && !p.run?.length && !p.env?.length && !p.ai && !p.clipboard && !p.keyring && !p.browser && !p.shader) {
+  if (!p.read?.length && !p.write?.length && !p.net?.length && !p.run?.length && !p.env?.length && !p.ai && !p.clipboard && !p.keyring && !p.browser && !p.shader && !p.udp) {
     lines.push('(no permissions declared)');
   }
 

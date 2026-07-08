@@ -102,6 +102,7 @@ These are on/off flags, often shortcuts that expand to multiple permissions.
 | `browser`   | Open URLs in browser     | `run: [open, xdg-open, cmd]` (platform-specific)  |
 | `shader`    | Per-pixel shader callbacks | Runtime flag only (no Deno flag)                |
 | `map`       | Tile map providers         | `net: [tile.openstreetmap.org, *.basemaps.cartocdn.com, ...]` (7 hosts) |
+| `udp`       | UDP datagram sockets       | `--unstable-net` (still needs `net` for sends; independent of `all`)    |
 
 ### Special Values
 
